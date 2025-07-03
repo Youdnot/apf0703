@@ -28,34 +28,9 @@ cur_vel = init_vel.copy()
 # obstacles
 init_mask = np.zeros((view_width, view_height), dtype=bool)
 
-def updateMask(cur_mask: np.ndarray, det_mask: np.ndarray) -> np.ndarray:
-    """
-    Update the mask of the window.
-    """
-    # 根据det_mask对cur_mask进行更新
-    # 数据格式类似以下，从检测模型中输出的掩码获得，其中True表示障碍物，
-    # 这是系统当前的mask，从状态中读取，需要
-    cur_mask = np.zeros((view_width, view_height), dtype=bool)
-    # 这是这一帧模型检测输出的mask，需要根据其对现有的障碍物进行更新
-    det_mask = np.zeros((view_width, view_height), dtype=bool)
-    # 根据det_mask对cur_mask进行动态更新，并保持一定的阻尼
-    #cur_mask = det_mask...
-    return cur_mask
-
-def getObstacles(self) -> np.ndarray:
-    """
-    Get the obstacles of the window.
-    """
-    # 从mask中获取障碍物
-    # obstacles = cur_mask...
-    # 注意要兼容后续的力的计算
-    return obstacles
-
-# Setting parameters for the potential field
+# force and potential field
 k_att = zeta =  10.0  # 吸引力系数
 k_rep = eta = 10.0  # 排斥力系数
-
-
 
 def getRepulsiveForce(self) -> np.ndarray:
     """
@@ -74,7 +49,11 @@ def getRepulsiveForce(self) -> np.ndarray:
     
     valid_mask_window = np.argwhere((1 / D_window - 1 / self.d_0) > 0)[:, 0]
     valid_mask_anchor = np.argwhere((1 / D_anchor - 1 / self.d_0) > 0)[:, 0]
-    valid_mask = valid_mask_window + valid_mask_anchor
+    valid_mask = valid_mask_window + valid_mask_anchor # 伪代码，需要根据实际情况修改
+    # 这里根据valid_mask返回一个变量，表示是否发生了碰撞
+    collision = False # 伪代码，需要根据实际情况修改
+
+
     rep_force = np.sum(rep_force[valid_mask, :], axis=0)
 
     if not np.all(rep_force == 0):
@@ -99,6 +78,29 @@ def getAttractiveForce(self, cur_pos: np.ndarray, anchor_pos: np.ndarray) -> np.
             attr_force = attr_force / np.linalg.norm(attr_force)
         
         return attr_force
+
+def updateMask(cur_mask: np.ndarray, det_mask: np.ndarray) -> np.ndarray:
+    """
+    Update the mask of the window.
+    """
+    # 根据det_mask对cur_mask进行更新
+    # 数据格式类似以下，从检测模型中输出的掩码获得，其中True表示障碍物，
+    # 这是系统当前的mask，从状态中读取，需要
+    cur_mask = np.zeros((view_width, view_height), dtype=bool)
+    # 这是这一帧模型检测输出的mask，需要根据其对现有的障碍物进行更新
+    det_mask = np.zeros((view_width, view_height), dtype=bool)
+    # 根据det_mask对cur_mask进行动态更新，并保持一定的阻尼
+    #cur_mask = det_mask...
+    return cur_mask
+
+def getObstacles(self) -> np.ndarray:
+    """
+    Get the obstacles of the window.
+    """
+    # 从mask中获取障碍物
+    # obstacles = cur_mask...
+    # 注意要兼容后续的力的计算
+    return obstacles
 
 def updateWindow(self):
     """
@@ -125,6 +127,8 @@ def visualize(self):
     Visualize the window.
     """
     # 可视化的过程
-    # 根据检测到的障碍物计算势场的分布
+    # 需要可视化的元素包括：
+    # 窗口的中心点、外边框
+    # 障碍物
     pass
 
