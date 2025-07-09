@@ -23,10 +23,13 @@ position = [0, 0, 0.5]
 rotation = [0, 0, 0, 1]
 
 # Scale (x, y, z) in meters
-scale = [0.1, 0.1, 1]
+scale = 0.3
+ratio = 1920/1080
+scale = [ratio*scale, scale, 1]
 
 # Texture file (must be jpg or png)
-texture_file = 'texture.jpg'
+# texture_file = 'texture.jpg'
+texture_file = 'grid.png'
 
 #------------------------------------------------------------------------------
 
@@ -111,21 +114,21 @@ listener.start()
 # You can call update_position([x, y, z]) to change position dynamically
 # Example: update_position([0.1, 0.1, 0.6])
 
-import time
-time.sleep(3)  # Wait for the element to be created
-update_position([0.05, 0.05, 0.5])
+# import time
+# time.sleep(3)  # Wait for the element to be created
+# update_position([0.05, 0.05, 0.5])
 
-time.sleep(3)  # Wait for the element to be created
-update_position([0.05, -0.05, 0.5])
+# time.sleep(3)  # Wait for the element to be created
+# update_position([0.05, -0.05, 0.5])
 
-time.sleep(3)  # Wait for the element to be created
-update_position([-0.05, -0.05, 0.5])
+# time.sleep(3)  # Wait for the element to be created
+# update_position([-0.05, -0.05, 0.5])
 
-time.sleep(3)  # Wait for the element to be created
-update_position([-0.05, 0.05, 0.5])
+# time.sleep(3)  # Wait for the element to be created
+# update_position([-0.05, 0.05, 0.5])
 
-time.sleep(3)  # Wait for the element to be created
-update_position([0, 0, 0.5])
+# time.sleep(3)  # Wait for the element to be created
+# update_position([0, 0, 0.5])
 
 stop_event.wait()
 
