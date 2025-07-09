@@ -14,16 +14,16 @@ import hl2ss_rus
 # Settings --------------------------------------------------------------------
 
 # HoloLens address
-host = '192.168.1.7'
+host = '192.168.137.154'
 
 # Position in camera space (x, y, z)
-position = [0,0, 0.5]
+position = [0, 0, 0.5]
 
 # Rotation in camera space (x, y, z, w) as a quaternion
 rotation = [0, 0, 0, 1]
 
 # Scale (x, y, z) in meters
-scale = [0.05, 0.05, 1]
+scale = [0.1, 0.1, 1]
 
 # Texture file (must be jpg or png)
 texture_file = 'texture.jpg'
@@ -110,6 +110,22 @@ listener.start()
 # Example: Update position every 2 seconds
 # You can call update_position([x, y, z]) to change position dynamically
 # Example: update_position([0.1, 0.1, 0.6])
+
+import time
+time.sleep(3)  # Wait for the element to be created
+update_position([0.05, 0.05, 0.5])
+
+time.sleep(3)  # Wait for the element to be created
+update_position([0.05, -0.05, 0.5])
+
+time.sleep(3)  # Wait for the element to be created
+update_position([-0.05, -0.05, 0.5])
+
+time.sleep(3)  # Wait for the element to be created
+update_position([-0.05, 0.05, 0.5])
+
+time.sleep(3)  # Wait for the element to be created
+update_position([0, 0, 0.5])
 
 stop_event.wait()
 
