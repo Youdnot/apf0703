@@ -112,7 +112,6 @@ listener.start()
 
 # Example: Update position every 2 seconds
 # You can call update_position([x, y, z]) to change position dynamically
-# Example: update_position([0.1, 0.1, 0.6])
 
 # import time
 # time.sleep(3)  # Wait for the element to be created
