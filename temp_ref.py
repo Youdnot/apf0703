@@ -1,0 +1,225 @@
+from uuid import RESERVED_FUTURE
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import matplotlib.patches as patches
+
+from utils.calculate_force import get_attractive_force, get_repulsive_force, get_total_force
+from utils.convert_coordinate import convert_coordinates
+
+# from scipy.spatial.distance import cdist
+
+# Setting parameters
+# basic view
+view_width = 1920
+view_height = 1080
+
+# anchor point
+anchor_point = np.array([500, 700])
+# anchor_point = np.array([300, 500])
+
+# window
+window_width = 200
+window_height = 200
+
+init_pos = anchor_point.copy()
+init_vel = np.array([0, 0])
+
+path_data = [init_pos.copy()]
+
+max_v = 20
+
+cur_pos = init_pos.copy()
+cur_vel = init_vel.copy()
+
+# obstacles
+# 建立一个稍有重叠但是虚假的障碍物
+obstacle_mask = np.zeros((view_width, view_height), dtype=bool)
+obstacle_mask[500:600, 600:700] = True
+
+obstacles = obstacle_mask
+
+# force and potential field
+k_att = zeta =  10.0  # 吸引力系数
+k_rep = eta = 10.0  # 排斥力系数
+
+# 设置阻尼系数
+damping_factor = 1    # 系数越大，阻尼效应越弱
+
+d0 = 200    # 障碍物影响范围
+
+# 设置时间步长
+dt = 0.2
+
+cur_pos[0] -= 100
+cur_pos[1] -= 50
+
+# 全局变量用于存储matplotlib对象
+fig = None
+ax = None
+anchor_plot = None
+window_plot = None
+path_plot = None
+window_rect = None
+window_influence = None
+anchor_influence = None
+obstacle_plot = None
+attractive_force_arraw = None
+repulsive_force_arraw = None
+total_force_arraw = None
+
+def update():
+    global cur_pos, cur_vel, obstacle_mask, view_width, view_height, d0, k_att, k_rep, max_v, path_data
+    
+    # 计算当前力并更新机器人位置
+    force = get_total_force(cur_pos, anchor_point, obstacle_mask, view_width, view_height, d0, k_att, k_rep)
+    cur_vel = damping_factor * force + (1 - damping_factor) * cur_vel
+    cur_vel /= np.linalg.norm(cur_vel)
+    cur_vel *= max_v
+    cur_pos = cur_pos + cur_vel * dt
+    print(f"Current Position: {cur_pos}, Current Velocity: {cur_vel}")
+
+    # test convertion
+    converted_pos = convert_coordinates(cur_pos)
+    # print(f"Converted Position: {converted_pos}")
+    
+    path_data.append(cur_pos.copy())
+
+    return force
+
+def init():
+    """初始化动画"""
+    global fig, ax, anchor_plot, window_plot, path_plot, window_rect, window_influence, anchor_influence, obstacle_plot
+    global attractive_force_arraw, repulsive_force_arraw, total_force_arraw
+    
+    # 创建图形和坐标轴
+    fig, ax = plt.subplots(figsize=(10, 8))
+    
+    ax.set_xlim(-100, view_width + 100)
+    ax.set_ylim(-100, view_height + 100)
+    ax.set_title('Dynamic Artificial Potential Field')
+    
+    # 绘制静态元素
+    anchor_plot, = ax.plot(anchor_point[0], anchor_point[1], 'go', markersize=10, label='Anchor Point')
+    window_plot, = ax.plot(cur_pos[0], cur_pos[1], 'bo', markersize=8, label='Window Center')
+    path_plot, = ax.plot([], [], 'b-', linewidth=2, label='Robot Path')
+    
+    # 绘制窗口
+    window_rect = patches.Rectangle(
+        (cur_pos[0] - window_width/2, cur_pos[1] - window_height/2),
+        window_width, window_height,
+        linewidth=2, edgecolor='blue', facecolor='lightblue', alpha=0.7, label='Window'
+    )
+    ax.add_patch(window_rect)
+    
+    # 绘制影响范围
+    window_influence = patches.Circle((cur_pos[0], cur_pos[1]), radius=d0, linewidth=2, edgecolor='blue', facecolor='lightblue', alpha=0.05, label='Window Influence Range')
+    ax.add_patch(window_influence)
+    
+    anchor_influence = patches.Circle((anchor_point[0], anchor_point[1]), radius=d0, linewidth=2, edgecolor='blue', facecolor='lightblue', alpha=0.05, label='Anchor Influence Range')
+    ax.add_patch(anchor_influence)
+    
+    # 使用imshow绘制障碍物
+    obstacle_plot = ax.imshow(obstacle_mask.T, origin='lower', 
+                              extent=(0, view_width, 0, view_height),
+                              cmap='Reds', alpha=0.5)
+    
+    # 计算初始力并绘制箭头
+    attractive_force = get_attractive_force(cur_pos, anchor_point) * k_att * 9
+    repulsive_force = get_repulsive_force(cur_pos, anchor_point, obstacle_mask, view_width, view_height, d0) * k_rep * 9
+    total_force = get_total_force(cur_pos, anchor_point, obstacle_mask, view_width, view_height, d0, k_att, k_rep) * 9
+    
+    # 绘制力向量箭头
+    attractive_force_arraw = ax.arrow(cur_pos[0], cur_pos[1], attractive_force[0], attractive_force[1],
+                             width=5, color='blue')
+    repulsive_force_arraw = ax.arrow(cur_pos[0], cur_pos[1], repulsive_force[0], repulsive_force[1],
+                             width=5, color='red')
+    total_force_arraw = ax.arrow(cur_pos[0], cur_pos[1], total_force[0], total_force[1],
+                             width=5, color='green')
+    
+    # 设置图例和标签
+    ax.legend(loc='upper left')
+    ax.set_xlabel('X Position')
+    ax.set_ylabel('Y Position')
+    plt.tight_layout()
+    
+    return path_plot, window_plot
+
+def update_plot(frame):
+    """更新动画帧"""
+    global cur_pos, cur_vel, obstacle_mask, view_width, view_height, d0, k_att, k_rep, max_v, path_plot, window_plot, path_data
+    global attractive_force_arraw, repulsive_force_arraw, total_force_arraw, ax, window_rect, window_influence
+    
+    # 调用update函数并获取计算出的力
+    force = update()
+
+    # 可视化更新部份
+    path = np.array(path_data)
+    if path_plot is not None:
+        path_plot.set_data(path[:, 0], path[:, 1])
+    if window_plot is not None:
+        window_plot.set_data([cur_pos[0]], [cur_pos[1]])
+
+    # 更新窗口及其影响范围
+    if window_rect is not None:
+        window_rect.set_xy((cur_pos[0] - window_width/2, cur_pos[1] - window_height/2))
+    if window_influence is not None:
+        window_influence.center = cur_pos[0], cur_pos[1]
+
+    # 计算新的力向量
+    attractive_force = get_attractive_force(cur_pos, anchor_point) * k_att * 9
+    repulsive_force = get_repulsive_force(cur_pos, anchor_point, obstacle_mask, view_width, view_height, d0) * k_rep * 9
+    
+    # 安全地移除旧的箭头
+    if ax is not None:
+        try:
+            if attractive_force_arraw is not None and attractive_force_arraw in ax.artists:
+                attractive_force_arraw.remove()
+        except:
+            pass
+        
+        try:
+            if repulsive_force_arraw is not None and repulsive_force_arraw in ax.artists:
+                repulsive_force_arraw.remove()
+        except:
+            pass
+            
+        try:
+            if total_force_arraw is not None and total_force_arraw in ax.artists:
+                total_force_arraw.remove()
+        except:
+            pass
+
+        # 创建新的箭头
+        attractive_force_arraw = ax.arrow(cur_pos[0], cur_pos[1], attractive_force[0], attractive_force[1],
+                             width=5, color='blue')
+
+        repulsive_force_arraw = ax.arrow(cur_pos[0], cur_pos[1], repulsive_force[0], repulsive_force[1],
+                             width=5, color='red')
+                             
+        total_force_arraw = ax.arrow(cur_pos[0], cur_pos[1], 9 * force[0], 9 * force[1],
+                             width=5, color='green')
+
+    # 返回非None的对象
+    artists = []
+    if path_plot is not None:
+        artists.append(path_plot)
+    if window_plot is not None:
+        artists.append(window_plot)
+    if attractive_force_arraw is not None:
+        artists.append(attractive_force_arraw)
+    if repulsive_force_arraw is not None:
+        artists.append(repulsive_force_arraw)
+    if total_force_arraw is not None:
+        artists.append(total_force_arraw)
+    
+    return artists
+
+# 创建动画
+# 首先调用init函数来初始化图形
+init()
+ani = animation.FuncAnimation(fig, update_plot, frames=2000, init_func=init, 
+                             blit=False, interval=50, repeat=False)
+
+plt.show()

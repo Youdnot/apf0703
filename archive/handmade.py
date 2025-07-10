@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import matplotlib.patches as patches
 
-from utils.calculate_force import get_attractive_force, get_repulsive_force, get_total_force, update_position_and_velocity
+from utils.calculate_force import get_attractive_force, get_repulsive_force, get_total_force
 from utils.convert_coordinate import convert_coordinates
 
 # from scipy.spatial.distance import cdist
@@ -92,11 +92,11 @@ window_rect = patches.Rectangle(
 ax.add_patch(window_rect)
 
 # 绘制锚点影响范围
-window_influence = patches.Circle((cur_pos[0], cur_pos[1]), radius=d0, linewidth=2, edgecolor='blue', facecolor='lightblue', alpha=0.05, label='Window Influence Range')
+window_influence = patches.Circle(cur_pos, radius=d0, linewidth=2, edgecolor='blue', facecolor='lightblue', alpha=0.05, label='Window Influence Range')
 ax.add_patch(window_influence)
 
 # 绘制锚点影响范围
-anchor_influence = patches.Circle((anchor_point[0], anchor_point[1]), radius=d0, linewidth=2, edgecolor='blue', facecolor='lightblue', alpha=0.05, label='Anchor Influence Range')
+anchor_influence = patches.Circle(anchor_point, radius=d0, linewidth=2, edgecolor='blue', facecolor='lightblue', alpha=0.05, label='Anchor Influence Range')
 ax.add_patch(anchor_influence)
 
 test_plot, = ax.plot([0], [0], 'go', markersize=8, label='Axis Test')
@@ -124,12 +124,23 @@ def init():
     window_plot.set_data([], [])
     return path_plot, window_plot
 
-def update_plot(frame):
+def update(frame):
     """更新动画帧"""
-    global cur_pos, cur_vel, obstacle_mask, view_width, view_height, d0, k_att, k_rep, max_v, path_plot, window_plot, path_data
+    global cur_pos, cur_vel, obstacle_mask, view_width, view_height, d0, k_att, k_rep, max_v, path_plot, window_plot
     
-    # 更新位置和速度
-    force, cur_pos, cur_vel, converted_pos, path_data = update_position_and_velocity(cur_pos, cur_vel, anchor_point, obstacle_mask, view_width, view_height, d0, k_att, k_rep, damping_factor, max_v, dt, path_data)
+    # 计算当前力并更新机器人位置
+    force = get_total_force(cur_pos, anchor_point, obstacle_mask, view_width, view_height, d0, k_att, k_rep)
+    cur_vel = damping_factor * force + (1 - damping_factor) * cur_vel
+    cur_vel /= np.linalg.norm(cur_vel)
+    cur_vel *= max_v
+    cur_pos = cur_pos + cur_vel * dt
+    print(f"Current Position: {cur_pos}, Current Velocity: {cur_vel}")
+
+    # test convertion
+    converted_pos = convert_coordinates(cur_pos)
+    # print(f"Converted Position: {converted_pos}")
+    
+    path_data.append(cur_pos.copy())
 
     # 可视化更新部份
     path = np.array(path_data)
@@ -167,7 +178,7 @@ def update_plot(frame):
 
 
 # 创建动画，需要重新调整可视化并封装图像的init和参数的update以传入，后续再调整
-ani = animation.FuncAnimation(fig, update_plot, frames=2000, init_func=init, 
+ani = animation.FuncAnimation(fig, update, frames=2000, init_func=init, 
                              blit=False, interval=50, repeat=False)
 
 # 外围图例

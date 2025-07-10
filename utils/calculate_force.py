@@ -1,4 +1,5 @@
 import numpy as np
+from utils.convert_coordinate import convert_coordinates
 
 def get_attractive_force(position: np.ndarray, anchor: np.ndarray) -> np.ndarray:
     """
@@ -102,3 +103,46 @@ def get_total_force(position: np.ndarray, anchor: np.ndarray, obstacle_mask: np.
     repulsive_force = get_repulsive_force(position, anchor, obstacle_mask, view_width, view_height, d0)
     total_force = k_att * attractive_force + k_rep * repulsive_force
     return total_force
+
+def update_position_and_velocity(cur_pos: np.ndarray, cur_vel: np.ndarray, 
+    anchor_point: np.ndarray, obstacle_mask: np.ndarray, 
+    view_width: int, view_height: int, d0: float, 
+    k_att: float, k_rep: float, damping_factor: float, 
+    max_v: float, dt: float, path_data: list) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, list]:  
+    """
+    更新机器人位置和速度
+    
+    基于人工势场法计算合力，并更新机器人的位置和速度。
+    
+    Args:
+        current_position (np.ndarray): 当前位置 [x, y]
+        current_velocity (np.ndarray): 当前速度 [vx, vy]
+        anchor_point (np.ndarray): 锚点位置 [x, y]
+        obstacle_mask (np.ndarray): 障碍物掩码矩阵
+        view_width (int): 视图宽度
+        view_height (int): 视图高度
+        d0 (float): 障碍物影响范围
+        k_att (float): 吸引力系数
+        k_rep (float): 排斥力系数
+        damping_factor (float): 阻尼系数
+        max_v (float): 最大速度
+        dt (float): 时间步长
+    
+    Returns:
+        tuple[np.ndarray, np.ndarray, np.ndarray]: (新位置, 新速度, 合力)
+    """
+    # 计算当前力
+    force = get_total_force(cur_pos, anchor_point, obstacle_mask, view_width, view_height, d0, k_att, k_rep)
+    cur_vel = damping_factor * force + (1 - damping_factor) * cur_vel
+    cur_vel /= np.linalg.norm(cur_vel)
+    cur_vel *= max_v
+    cur_pos = cur_pos + cur_vel * dt
+    print(f"Current Position: {cur_pos}, Current Velocity: {cur_vel}")
+
+    # test convertion
+    converted_pos = convert_coordinates(cur_pos)
+    # print(f"Converted Position: {converted_pos}")
+    
+    path_data.append(cur_pos.copy())
+
+    return force, cur_pos, cur_vel, converted_pos, path_data
