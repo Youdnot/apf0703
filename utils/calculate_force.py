@@ -137,11 +137,11 @@ def update_position_and_velocity(cur_pos: np.ndarray, cur_vel: np.ndarray,
     cur_vel /= np.linalg.norm(cur_vel)
     cur_vel *= max_v
     cur_pos = cur_pos + cur_vel * dt
-    print(f"Current Position: {cur_pos}, Current Velocity: {cur_vel}")
 
     # test convertion
     converted_pos = convert_coordinates(cur_pos)
-    # print(f"Converted Position: {converted_pos}")
+
+    print(f"Current Position: {cur_pos}, Current Velocity: {cur_vel}, Converted Position: {converted_pos}")
     
     path_data.append(cur_pos.copy())
 

@@ -17,6 +17,7 @@ def convert_coordinates(position, depth=depth, scaling_factor=scaling_factor):
     # Adjust to center of camera space
     view_position += np.array([940, 637])
     # Adjust amplitude from image pixel space to Unity camera space
+    view_position = view_position.astype(np.float32)
     view_position *= scaling_factor
     # Add depth to the z-axis
     view_position = np.append(view_position, depth)
