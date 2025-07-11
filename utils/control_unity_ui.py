@@ -5,6 +5,11 @@
 #------------------------------------------------------------------------------
 
 from pynput import keyboard
+import sys
+import os
+
+# Add external directory to Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'external', 'hl2ss'))
 
 import threading as mt
 import hl2ss
@@ -14,7 +19,7 @@ import hl2ss_rus
 # Settings --------------------------------------------------------------------
 
 # HoloLens address
-host = '192.168.137.154'
+host = '192.168.31.89'
 
 # Position in camera space (x, y, z)
 position = [0, 0, 0.5]
@@ -23,13 +28,14 @@ position = [0, 0, 0.5]
 rotation = [0, 0, 0, 1]
 
 # Scale (x, y, z) in meters
-scale = 0.3
-ratio = 1920/1080
-scale = [ratio*scale, scale, 1]
+scale = 0.05
+scale = [scale, scale, 1]
+# ratio = 1920/1080
+# scale = [ratio*scale, scale, 1]
 
 # Texture file (must be jpg or png)
-# texture_file = 'texture.jpg'
-texture_file = 'grid.png'
+texture_file = 'assets/texture.jpg'
+# texture_file = 'grid.png'
 
 #------------------------------------------------------------------------------
 
@@ -105,10 +111,10 @@ def on_press(key):
 #------------------------------------------------------------------------------
 
 # Initialize connection and create element
-element_key = initialize_connection()
+# element_key = initialize_connection()
 
-listener = keyboard.Listener(on_press=on_press)
-listener.start()
+# listener = keyboard.Listener(on_press=on_press)
+# listener.start()
 
 # Example: Update position every 2 seconds
 # You can call update_position([x, y, z]) to change position dynamically
@@ -129,8 +135,8 @@ listener.start()
 # time.sleep(3)  # Wait for the element to be created
 # update_position([0, 0, 0.5])
 
-stop_event.wait()
+# stop_event.wait()
 
 # Clean up
-disconnect()
-listener.join()
+# disconnect()
+# listener.join()
