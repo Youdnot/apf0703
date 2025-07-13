@@ -1,5 +1,6 @@
 assets/*
 external/*
+outputs/*
 
 # Python-generated files
 __pycache__/

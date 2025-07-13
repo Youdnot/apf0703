@@ -459,3 +459,37 @@ class IncrementalObjectTracker:
         annotated_frame = label_annotator.annotate(annotated_frame, detections, labels)
 
         return annotated_frame
+    
+
+# 合并函数，将MaskDictionaryModel中的所有mask合并为一个bool类型的ndarray
+def get_merged_bool_mask(mask_dict: MaskDictionaryModel) -> np.ndarray:
+    """
+    将MaskDictionaryModel中的所有mask合并为一个bool类型的ndarray
+    
+    Args:
+        mask_dict: MaskDictionaryModel实例
+        
+    Returns:
+        np.ndarray: 合并后的bool mask，形状为(mask_height, mask_width)
+    """
+    if not mask_dict.labels:
+        return np.zeros((mask_dict.mask_height, mask_dict.mask_width), dtype=bool)
+    
+    # 创建CPU上的合并掩码
+    merged_mask = np.zeros((mask_dict.mask_height, mask_dict.mask_width), dtype=bool)
+    
+    for obj_id, obj_info in mask_dict.labels.items():
+        # 确保mask在CPU上并转换为numpy数组
+        if torch.is_tensor(obj_info.mask):
+            obj_mask = obj_info.mask.cpu().numpy()
+        else:
+            obj_mask = obj_info.mask
+        
+        # 确保形状匹配
+        if obj_mask.shape != merged_mask.shape:
+            print(f"[Warning] Mask shape mismatch: expected {merged_mask.shape}, got {obj_mask.shape}")
+            continue
+            
+        merged_mask = merged_mask | obj_mask
+    
+    return merged_mask

@@ -52,8 +52,8 @@ def main():
 
 
     # Open the camera (or replace with local video file, e.g., cv2.VideoCapture("video.mp4"))
-    # cap = cv2.VideoCapture(0)
-    cap = cv2.VideoCapture("assets/walking test data.mp4")
+    cap = cv2.VideoCapture(0)
+    # cap = cv2.VideoCapture("assets/walking test data.mp4")
     if not cap.isOpened():
         print("[Error] Cannot open camera.")
         return
@@ -77,13 +77,29 @@ def main():
                 frame_idx += 1
                 continue
 
-            # process_image_bgr = cv2.cvtColor(process_image, cv2.COLOR_RGB2BGR)
-            # cv2.imshow("Live Inference", process_image_bgr)
-
+            # 从tracker获取当前mask和元数据
+            current_mask_dict = tracker.last_mask_dict
             
-            # if cv2.waitKey(1) & 0xFF == ord('q'):
-            #     print("[Info] Quit signal received.")
-            #     break
+            # 合并所有mask为bool数组
+            merged_bool_mask = get_merged_bool_mask(current_mask_dict)
+            
+            # 打印基本信息
+            print(f"[Frame {frame_idx}] 合并mask形状: {merged_bool_mask.shape}")
+            print(f"[Frame {frame_idx}] 检测到的对象像素数: {np.sum(merged_bool_mask)}")
+            print(f"[Frame {frame_idx}] 检测到的对象数量: {len(current_mask_dict.labels)}")
+
+            process_image_bgr = cv2.cvtColor(process_image, cv2.COLOR_RGB2BGR)
+            cv2.imshow("Live Inference", process_image_bgr)
+            
+            # 将布尔掩码转换为uint8格式用于显示
+            merged_mask_display = (merged_bool_mask * 255).astype(np.uint8)
+            cv2.imshow("Merged Bool Mask", merged_mask_display)
+            
+            # 添加waitKey以确保窗口更新
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord('q'):
+                print("[Info] Quit signal received.")
+                break
 
             tracker.save_current_state(output_dir=output_dir, raw_image=frame_rgb)
             frame_idx += 1

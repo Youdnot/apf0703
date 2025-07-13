@@ -55,6 +55,8 @@ dt = 0.2
 cur_pos[0] -= 100
 cur_pos[1] -= 50
 
+#------------------------------------------------------------------------------
+
 attractive_force = get_attractive_force(cur_pos, anchor_point)
 attractive_force *= k_att
 print(attractive_force)
@@ -64,6 +66,8 @@ repulsive_force *= k_rep
 print(repulsive_force)
 total_force = attractive_force + repulsive_force
 print(total_force)
+
+#------------------------------------------------------------------------------
 
 # UI control
 from utils.control_unity_ui import *
