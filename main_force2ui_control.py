@@ -6,66 +6,42 @@ import matplotlib.patches as patches
 
 from utils.calculate_force import get_attractive_force, get_repulsive_force, get_total_force, update_position_and_velocity
 from utils.convert_coordinate import convert_coordinates
+from config import config_manager
 
-# Setting parameters
-# basic view
-view_width = 1920
-view_height = 1080
+# 获取配置
+view_config = config_manager.view_config
+window_config = config_manager.window_config
+physics_config = config_manager.physics_config
+sim_config = config_manager.sim_config
 
-# anchor point
-anchor_point = np.array([500, 700])
-# anchor_point = np.array([300, 500])
+# 初始化路径数据
+path_data = [sim_config.init_pos.copy()]
 
-
-# window
-window_width = 200
-window_height = 200
-
-init_pos = anchor_point.copy()
-init_vel = np.array([0, 0])
-
-path_data = [init_pos.copy()]
-
-max_v = 20
-
-cur_pos = init_pos.copy()
-cur_vel = init_vel.copy()
+# 当前位置和速度
+cur_pos = sim_config.init_pos.copy()
+cur_vel = sim_config.init_vel.copy()
 
 converted_pos = np.array([0, 0, 0])
 
-# obstacles
-# 建立一个稍有重叠但是虚假的障碍物
-obstacle_mask = np.zeros((view_width, view_height), dtype=bool)
+# Initialize obstacle mask
+obstacle_mask = np.zeros((view_config.width, view_config.height), dtype=bool)
 obstacle_mask[500:600, 600:700] = True
-
-obstacles = obstacle_mask
-
-# force and potential field
-k_att = zeta =  10.0  # 吸引力系数
-k_rep = eta = 10.0  # 排斥力系数
-
-# 设置阻尼系数
-damping_factor = 1    # 系数越大，阻尼效应越弱
-
-d0 = 200    # 障碍物影响范围
-
-# 设置时间步长
-dt = 0.2
 
 cur_pos[0] -= 100
 cur_pos[1] -= 50
 
 #------------------------------------------------------------------------------
 
-attractive_force = get_attractive_force(cur_pos, anchor_point)
-attractive_force *= k_att
-print(attractive_force)
+# attractive_force = get_attractive_force(cur_pos, sim_config.anchor_point)
+# attractive_force *= physics_config.k_att
+# print(attractive_force)
 
-repulsive_force = get_repulsive_force(cur_pos, anchor_point, obstacle_mask, view_width, view_height, d0)
-repulsive_force *= k_rep
-print(repulsive_force)
-total_force = attractive_force + repulsive_force
-print(total_force)
+# repulsive_force = get_repulsive_force(cur_pos, sim_config.anchor_point, obstacle_mask, 
+#                                     view_config.width, view_config.height, physics_config.d0)
+# repulsive_force *= physics_config.k_rep
+# print(repulsive_force)
+# total_force = attractive_force + repulsive_force
+# print(total_force)
 
 #------------------------------------------------------------------------------
 
@@ -90,7 +66,7 @@ try:
             break
             
         # 更新位置和速度
-        force, cur_pos, cur_vel, converted_pos, path_data = update_position_and_velocity(cur_pos, cur_vel, anchor_point, obstacle_mask, view_width, view_height, d0, k_att, k_rep, damping_factor, max_v, dt, path_data)
+        force, cur_pos, cur_vel, converted_pos, path_data = update_position_and_velocity(cur_pos, cur_vel, sim_config.anchor_point, obstacle_mask, view_config.width, view_config.height, physics_config.d0, physics_config.k_att, physics_config.k_rep, physics_config.damping_factor, physics_config.max_v, physics_config.dt, path_data)
         update_position(converted_pos)
         
         time.sleep(0.1)  # 模拟时间延迟
