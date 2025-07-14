@@ -32,19 +32,6 @@ cur_pos[1] -= 50
 
 #------------------------------------------------------------------------------
 
-# attractive_force = get_attractive_force(cur_pos, sim_config.anchor_point)
-# attractive_force *= physics_config.k_att
-# print(attractive_force)
-
-# repulsive_force = get_repulsive_force(cur_pos, sim_config.anchor_point, obstacle_mask, 
-#                                     view_config.width, view_config.height, physics_config.d0)
-# repulsive_force *= physics_config.k_rep
-# print(repulsive_force)
-# total_force = attractive_force + repulsive_force
-# print(total_force)
-
-#------------------------------------------------------------------------------
-
 # UI control
 from utils.control_unity_ui import *
 
