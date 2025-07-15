@@ -4,77 +4,52 @@
 # Test continues location.
 #------------------------------------------------------------------------------
 
-from utils.control_unity_ui import *
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import matplotlib.patches as patches
 
-# Settings --------------------------------------------------------------------
+from utils.calculate_force import get_attractive_force, get_repulsive_force, get_total_force, update_position_and_velocity
+from utils.convert_coordinate import convert_coordinates
+from config import config_manager
+
+
+from utils.control_unity_ui import *
+from utils.pv_stream import *
+
+# Settings for movement--------------------------------------------------------
+
+view_config = config_manager.view_config
+window_config = config_manager.window_config
+physics_config = config_manager.physics_config
+sim_config = config_manager.sim_config
+
+# 初始化路径数据
+path_data = [sim_config.init_pos.copy()]
+
+# 当前位置和速度
+cur_pos = sim_config.init_pos.copy()
+cur_vel = sim_config.init_vel.copy()
+
+converted_pos = np.array([0, 0, 0])
+
+# Initialize obstacle mask
+obstacle_mask = np.zeros((view_config.width, view_config.height), dtype=bool)
+obstacle_mask[500:600, 600:700] = True
+
+cur_pos[0] -= 100
+cur_pos[1] -= 50
+
+# Settings for Hololens connection----------------------------------------------
 
 # HoloLens address
-host = '192.168.31.89'
+# host = '192.168.31.89'
+host = '169.254.10.1'
 
-# Settings for pv stream
-
-# Operating mode
-# 0: video
-# 1: video + camera pose
-# 2: query calibration (single transfer)
-mode = hl2ss.StreamMode.MODE_1
-
-# Enable Mixed Reality Capture (Holograms)
-enable_mrc = False
-
-# Enable Shared Capture
-# If another program is already using the PV camera, you can still stream it by
-# enabling shared mode, however you cannot change the resolution and framerate
-shared = True
-
-# Camera parameters
-# Ignored in shared mode
-width     = 1920
-height    = 1080
-framerate = 5    # 30
-
-# Video encoding profile and bitrate (None = default)
-profile = hl2ss.VideoProfile.H265_MAIN
-bitrate = None
-
-# Decoded format
-# Options include:
-# 'bgr24'
-# 'rgb24'
-# 'bgra'
-# 'rgba'
-# 'gray8'
-decoded_format = 'bgr24'
-
-# Settings for ui control
-
-# Position in camera space (x, y, z)
-position = [0, 0, 0.5]
-
-# Rotation in camera space (x, y, z, w) as a quaternion
-rotation = [0, 0, 0, 1]
-
-# Scale (x, y, z) in meters
-scale_factor = 0.1
-# ratio = 1920/1080
-ratio = 1
-scale = [ratio*scale_factor, scale_factor, 1]
-
-# Texture file (must be jpg or png)
-texture_file = 'assets/texture.jpg'
-# texture_file = 'grid.png'
-
-# Text
-text = 'Test about to start!'
-
-# Font size
-font_size = 0.8
-
-# Text color
-rgba = [1, 1, 1, 1]
 
 #------------------------------------------------------------------------------
-
+# UI control
 # Global variables for connection and element management
 ipc = None
 element_key = None
@@ -82,7 +57,6 @@ stop_event = mt.Event()
 
 #------------------------------------------------------------------------------
 
-# 
 # Initialize connection and create element
 element_key = initialize_connection()
 
@@ -99,8 +73,8 @@ listener.start()
 
 
 #------------------------------------------------------------------------------
-from utils.pv_stream import *
 
+# PV stream
 hl2ss_lnm.start_subsystem_pv(host, hl2ss.StreamPort.PERSONAL_VIDEO, enable_mrc=enable_mrc, shared=shared)
 
 listener = hl2ss_utilities.key_listener(keyboard.Key.esc)
@@ -113,22 +87,26 @@ while (not listener.pressed()):
     data = client.get_next_packet()
 
     print(f'Frame captured at {data.timestamp}')
-    print(f'Focal length: {data.payload.focal_length}')
-    print(f'Principal point: {data.payload.principal_point}')
-    print(f'Exposure Time: {data.payload.exposure_time}')
-    print(f'Exposure Compensation: {data.payload.exposure_compensation}')
-    print(f'Lens Position (Focus): {data.payload.lens_position}')
-    print(f'Focus State: {data.payload.focus_state}')
-    print(f'ISO Speed: {data.payload.iso_speed}')
-    print(f'White Balance: {data.payload.white_balance}')
-    print(f'ISO Gains: {data.payload.iso_gains}')
-    print(f'White Balance Gains: {data.payload.white_balance_gains}')
-    print(f'Resolution {data.payload.resolution}')
-    print(f'Pose')
-    print(data.pose)
+    # print(f'Focal length: {data.payload.focal_length}')
+    # print(f'Principal point: {data.payload.principal_point}')
+    # print(f'Exposure Time: {data.payload.exposure_time}')
+    # print(f'Exposure Compensation: {data.payload.exposure_compensation}')
+    # print(f'Lens Position (Focus): {data.payload.lens_position}')
+    # print(f'Focus State: {data.payload.focus_state}')
+    # print(f'ISO Speed: {data.payload.iso_speed}')
+    # print(f'White Balance: {data.payload.white_balance}')
+    # print(f'ISO Gains: {data.payload.iso_gains}')
+    # print(f'White Balance Gains: {data.payload.white_balance_gains}')
+    # print(f'Resolution {data.payload.resolution}')
+    # print(f'Pose')
+    # print(data.pose)
 
     cv2.imshow('Video', data.payload.image)
     cv2.waitKey(1)
+
+    # 更新位置和速度
+    force, cur_pos, cur_vel, converted_pos, path_data = update_position_and_velocity(cur_pos, cur_vel, sim_config.anchor_point, obstacle_mask, view_config.width, view_config.height, physics_config.d0, physics_config.k_att, physics_config.k_rep, physics_config.damping_factor, physics_config.max_v, physics_config.dt, path_data)
+    update_position(converted_pos)
 
 client.close()
 listener.close()

@@ -25,8 +25,8 @@ class PhysicsConfig:
     k_rep: float = 10.0  # 排斥力系数
     damping_factor: float = 1.0  # 阻尼系数
     d0: float = 200.0  # 障碍物影响范围
-    max_v: float = 20.0  # 最大速度
-    dt: float = 0.2  # 时间步长
+    max_v: float = 10.0  # 最大速度
+    dt: float = 0.1  # 时间步长
 
 @dataclass
 class SimulationConfig:
