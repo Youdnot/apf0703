@@ -8,6 +8,7 @@ import numpy as np
 # 全局变量用于历史缓存
 _mask_history = []
 _max_history_size = 5  # 可自定义的缓存数量
+_accumulated_mask = None  # 缓存累积结果，避免重复计算
 
 def set_max_history_size(size: int) -> None:
     """
@@ -35,8 +36,9 @@ def clear_mask_history() -> None:
     - 检测模型重新初始化时
     - 需要重置阻尼效应时
     """
-    global _mask_history
+    global _mask_history, _accumulated_mask
     _mask_history.clear()
+    _accumulated_mask = None
 
 def get_mask_history_size() -> int:
     """
@@ -49,13 +51,13 @@ def get_mask_history_size() -> int:
 
 def update_mask(last_mask: np.ndarray, cur_mask: np.ndarray) -> np.ndarray:
     """
-    基于时间窗口的 mask 更新，使用布尔累积实现阻尼效应
+    基于时间窗口的 mask 更新，使用增量更新实现阻尼效应
     
     工作原理：
-    1. 将新的检测 mask 加入历史队列
-    2. 如果队列超出限制，自动移除最旧的 mask
-    3. 使用布尔或运算累积所有历史 mask
-    4. 所有历史 mask 都会被保留，实现阻尼效应
+    1. 维护一个累积的mask结果，避免重复计算
+    2. 使用增量更新：新mask直接与累积结果进行或运算
+    3. 当移除最旧的mask时，重新计算累积结果
+    4. 避免内存复制和重复的堆叠操作
     
     Args:
         last_mask: 上一个 mask (bool 类型)，用于兼容性，实际不使用
@@ -64,39 +66,37 @@ def update_mask(last_mask: np.ndarray, cur_mask: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: 更新后的 mask (bool 类型)
     
-    使用示例：
-        # 设置缓存大小
-        set_max_history_size(5)
-        
-        # 更新 mask
-        new_mask = update_mask(last_mask, current_detection_mask)
-        
-        # 检查缓存状态
-        cache_size = get_mask_history_size()
-        
-        # 清空缓存（如需要）
-        clear_mask_history()
+    性能优化：
+    - 避免重复的 np.stack 操作
+    - 使用增量更新而非重新计算
+    - 减少内存分配和复制
     """
-    global _mask_history, _max_history_size
+    global _mask_history, _max_history_size, _accumulated_mask
     
-    # 1. 将当前 mask 加入历史队列
-    _mask_history.append(cur_mask.copy())
+    # 1. 将当前 mask 加入历史队列（避免复制）
+    _mask_history.append(cur_mask)
     
     # 2. 如果队列超限，移除最旧的 mask
-    if len(_mask_history) == 0:
-        return cur_mask
     if len(_mask_history) > _max_history_size:
-        _mask_history.pop(0)
+        removed_mask = _mask_history.pop(0)
+        # 需要重新计算累积结果
+        _accumulated_mask = None
     
-    # 3. 使用 numpy 布尔运算直接合并所有历史 mask
-    if len(_mask_history) == 1:
-        return _mask_history[0]
+    # 3. 增量更新累积结果
+    if _accumulated_mask is None:
+        # 首次计算或需要重新计算
+        if len(_mask_history) == 1:
+            _accumulated_mask = _mask_history[0]
+        else:
+            # 使用就地操作避免额外的内存分配
+            _accumulated_mask = _mask_history[0].copy()
+            for mask in _mask_history[1:]:
+                np.logical_or(_accumulated_mask, mask, out=_accumulated_mask)
+    else:
+        # 增量更新：直接将新mask与累积结果进行或运算
+        np.logical_or(_accumulated_mask, cur_mask, out=_accumulated_mask)
     
-    # 将所有历史 mask 堆叠成3D数组，然后沿第一个轴进行布尔或运算
-    stacked_masks = np.stack(_mask_history, axis=0)
-    accumulated_mask = np.any(stacked_masks, axis=0)
-    
-    return accumulated_mask
+    return _accumulated_mask
 
 
 def test_mask_update():
@@ -148,9 +148,4 @@ def test_mask_update():
 
 
 if __name__ == "__main__":
-    import time
-    start_time = time.time()
     test_mask_update()
-    end_time = time.time()
-    total_time = end_time - start_time
-    print(f"测试完成，耗时: {total_time:.2f} 秒")

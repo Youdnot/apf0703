@@ -5,9 +5,9 @@
 
 import numpy as np
 
-cur_pos = np.array([0, 0])
 depth = 0.5
-scaling_factor = 0.1/338  # Scaling factor for conversion from pixel to factor in unity camera space
+# Scaling factor for conversion from pixel to factor in unity camera space
+scaling_factor = 0.1/338  
 
 def convert_coordinates(position, depth=depth, scaling_factor=scaling_factor):
     """

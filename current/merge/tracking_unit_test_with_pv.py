@@ -1,7 +1,7 @@
 from utils.camera_tracking import *
 from utils.pv_stream import *
 
-host = '169.254.10.1'
+host = '192.168.31.89'
 
 # import time
 # time.sleep(3)
@@ -11,7 +11,7 @@ def main():
     output_dir = "./outputs"
     prompt_text = "hand."
     detection_interval = 20
-    # max_frames = 300  # Maximum number of frames to process (prevents infinite loop)
+    max_frames = 300  # Maximum number of frames to process (prevents infinite loop)
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -75,8 +75,8 @@ def main():
             print(f"[Frame {frame_idx}] 检测到的对象像素数: {np.sum(merged_bool_mask)}")
             print(f"[Frame {frame_idx}] 检测到的对象数量: {len(current_mask_dict.labels)}")
 
-            # process_image_bgr = cv2.cvtColor(process_image, cv2.COLOR_RGB2BGR)
-            # cv2.imshow("Live Inference", process_image_bgr)
+            process_image_bgr = cv2.cvtColor(process_image, cv2.COLOR_RGB2BGR)
+            cv2.imshow("Live Inference", process_image_bgr)
             
             # 将布尔掩码转换为uint8格式用于显示
             merged_mask_display = (merged_bool_mask * 255).astype(np.uint8)

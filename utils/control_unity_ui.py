@@ -15,27 +15,21 @@ import threading as mt
 import hl2ss
 import hl2ss_lnm
 import hl2ss_rus
+import hl2ss_utilities
+
+from config import config_manager
 
 # Settings --------------------------------------------------------------------
+hololens_config = config_manager.hololens_config
+host = hololens_config.host
 
-# HoloLens address
-host = '192.168.31.89'
+ui_config = config_manager.ui_config
 
-# Position in camera space (x, y, z)
-position = [0, 0, 0.5]
+position = ui_config.position
+rotation = ui_config.rotation
+scale = ui_config.scale
+texture_file = ui_config.texture_file
 
-# Rotation in camera space (x, y, z, w) as a quaternion
-rotation = [0, 0, 0, 1]
-
-# Scale (x, y, z) in meters
-scale = 0.05
-scale = [scale, scale, 1]
-# ratio = 1920/1080
-# scale = [ratio*scale, scale, 1]
-
-# Texture file (must be jpg or png)
-texture_file = 'assets/texture.jpg'
-# texture_file = 'grid.png'
 
 #------------------------------------------------------------------------------
 

@@ -35,6 +35,32 @@ class SimulationConfig:
     init_pos: np.ndarray = np.array([500, 700])
     init_vel: np.ndarray = np.array([0, 0])
 
+@dataclass
+class HololensConfig:
+    """PV配置参数"""
+    # host: str = '192.168.31.89'
+    host: str = '169.254.10.1'
+
+@dataclass
+class UIConfig:
+    """UI配置参数"""
+    # Position in camera space (x, y, z)
+    position = [0, 0, 0.5]
+
+    # Rotation in camera space (x, y, z, w) as a quaternion
+    rotation = [0, 0, 0, 1]
+
+    # Scale (x, y, z) in meters
+    scale = 0.05
+    scale = [scale, scale, 1]
+    # ratio = 1920/1080
+    # scale = [ratio*scale, scale, 1]
+
+    # Texture file (must be jpg or png)
+    texture_file = 'assets/texture.jpg'
+    # texture_file = 'grid.png'
+
+
 class ConfigManager:
     """配置管理器"""
     
@@ -43,5 +69,7 @@ class ConfigManager:
         self.window_config = WindowConfig()
         self.physics_config = PhysicsConfig()
         self.sim_config = SimulationConfig()
+        self.hololens_config = HololensConfig()
+        self.ui_config = UIConfig()
 # 创建全局配置实例
 config_manager = ConfigManager() 
