@@ -61,3 +61,29 @@ def print_pv_stream_data(data):
     print(f'Resolution {data.payload.resolution}')
     print(f'Pose')
     print(data.pose)
+
+
+import queue
+import time
+import threading
+
+#------------------------------------------------------------------------------
+# A thread-safe queue to hold the most recent frame
+frame_queue = queue.Queue(maxsize=1) 
+
+def frame_producer(client, stop_event):
+    """This function runs in a separate thread and just gets frames."""
+    while not stop_event.is_set():
+        try:
+            data = client.get_next_packet()
+            frame = data.payload.image
+            
+            # If the queue is full, remove the old frame and add the new one
+            if not frame_queue.empty():
+                frame_queue.get_nowait() # Discard old frame
+            frame_queue.put_nowait(frame) # Put the newest frame
+        except queue.Full:
+            pass # Ignore if the queue is still full, we only want the latest
+        except Exception as e:
+            print(f"Error in producer thread: {e}")
+            time.sleep(0.5)
