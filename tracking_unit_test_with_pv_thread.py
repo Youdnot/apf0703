@@ -64,6 +64,7 @@ def main():
 
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             print(f"[Frame {frame_idx}] Processing live frame...")
+            print(f"width: {frame_rgb.shape[1]}, height: {frame_rgb.shape[0]}")
             process_image = tracker.add_image(frame_rgb)
 
             if process_image is None or not isinstance(process_image, np.ndarray):
@@ -78,9 +79,9 @@ def main():
             merged_bool_mask = get_merged_bool_mask(current_mask_dict)
             
             # 打印基本信息
-            print(f"[Frame {frame_idx}] 合并mask形状: {merged_bool_mask.shape}")
-            print(f"[Frame {frame_idx}] 检测到的对象像素数: {np.sum(merged_bool_mask)}")
-            print(f"[Frame {frame_idx}] 检测到的对象数量: {len(current_mask_dict.labels)}")
+            # print(f"[Frame {frame_idx}] 合并mask形状: {merged_bool_mask.shape}")
+            # print(f"[Frame {frame_idx}] 检测到的对象像素数: {np.sum(merged_bool_mask)}")
+            # print(f"[Frame {frame_idx}] 检测到的对象数量: {len(current_mask_dict.labels)}")
 
             # process_image_bgr = cv2.cvtColor(process_image, cv2.COLOR_RGB2BGR)
             # cv2.imshow("Live Inference", process_image_bgr)
