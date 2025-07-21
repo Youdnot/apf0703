@@ -24,14 +24,14 @@ enable_mrc = False
 # Enable Shared Capture
 # If another program is already using the PV camera, you can still stream it by
 # enabling shared mode, however you cannot change the resolution and framerate
-shared = True
-# shared = False
+# shared = True
+shared = False
 
 # Camera parameters
 # Ignored in shared mode
 width     = 1920
 height    = 1080
-framerate = 5  # 30
+framerate = 15  # only 15 or 30 is available
 
 # Video encoding profile and bitrate (None = default)
 profile = hl2ss.VideoProfile.H265_MAIN

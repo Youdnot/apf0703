@@ -117,7 +117,7 @@ try:
         # print(f"[Frame {frame_idx}] 检测到的对象像素数: {np.sum(merged_bool_mask)}")
         # print(f"[Frame {frame_idx}] 检测到的对象数量: {len(current_mask_dict.labels)}")
 
-        force, cur_pos, cur_vel, converted_pos, path_data = update_position_and_velocity(cur_pos, cur_vel, sim_config.anchor_point, obstacle_mask, view_config.width, view_config.height, physics_config.d0, physics_config.k_att, physics_config.k_rep, physics_config.damping_factor, physics_config.max_v, physics_config.dt, path_data)
+        force, cur_pos, cur_vel, converted_pos, path_data = update_position_and_velocity(cur_pos, cur_vel, sim_config.anchor_point, obstacle_mask.T, view_config.width, view_config.height, physics_config.d0, physics_config.k_att, physics_config.k_rep, physics_config.damping_factor, physics_config.max_v, physics_config.dt, path_data)
 
         window_cv_plot = np.zeros((view_config.height, view_config.width, 3), dtype=np.uint8)
         cv2.rectangle(window_cv_plot, (cur_pos[0]-100, view_config.height-(cur_pos[1]+100)), 
