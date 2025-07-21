@@ -1,13 +1,5 @@
-#------------------------------------------------------------------------------
-# This script adds a textured quad to the Unity scene in camera space.
-# Press esc to stop.
-# Test continues location.
-# Unified stop event, using mt.Event() as UI control
-#------------------------------------------------------------------------------
-
-from utils.pv_stream import *
-# import stop event in control_unity_ui module
-from utils.control_unity_ui import *
+from core.pv_stream import *
+from utils.keyboard_utils import *
 from config import config_manager
 
 hololens_config = config_manager.hololens_config
@@ -15,7 +7,7 @@ host = hololens_config.host
 
 #------------------------------------------------------------------------------
 
-# PV stream
+# pv stream
 hl2ss_lnm.start_subsystem_pv(host, hl2ss.StreamPort.PERSONAL_VIDEO, enable_mrc=enable_mrc, shared=shared)
 
 listener = keyboard.Listener(on_press=on_press)

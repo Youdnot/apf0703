@@ -1,12 +1,5 @@
-#------------------------------------------------------------------------------
-# This script adds a textured quad to the Unity scene in camera space.
-# Press esc to stop.
-# Test continues location.
-# Unified stop event, using mt.Event() as UI control
-#------------------------------------------------------------------------------
-
-from utils.pv_stream import *
-from utils.control_unity_ui import *
+from core.pv_stream import *
+from core.ui_control import *
 from config import config_manager
 
 hololens_config = config_manager.hololens_config

@@ -1,6 +1,6 @@
-from utils.camera_tracking import *
-from utils.pv_stream import *
-from utils.calculate_force import get_attractive_force, get_repulsive_force, get_total_force, update_position_and_velocity
+from core.detection import *
+from core.pv_stream import *
+from core.calculate_force import get_attractive_force, get_repulsive_force, get_total_force, update_position_and_velocity
 from utils.convert_coordinate import convert_coordinates
 from config import config_manager
 

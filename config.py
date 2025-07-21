@@ -1,6 +1,6 @@
 """
 配置管理模块
-集中管理仿真系统的所有配置参数
+集中管理系统的所有配置参数
 """
 
 from dataclasses import dataclass
@@ -60,6 +60,16 @@ class UIConfig:
     texture_file = 'assets/texture.jpg'
     # texture_file = 'grid.png'
 
+from datetime import datetime
+
+@dataclass
+class DetectionConfig:
+    """检测配置参数"""
+    output_dir: str = "outputs/" + datetime.now().strftime("%Y-%m-%d-%H%M")
+    detection_interval: int = 10
+    init_prompt_text: str = "hand."
+    final_prompt_text: str = "obstacle. person. viehicle. car. bus. truck. desk. table. chair. bin."
+
 
 class ConfigManager:
     """配置管理器"""
@@ -71,5 +81,6 @@ class ConfigManager:
         self.sim_config = SimulationConfig()
         self.hololens_config = HololensConfig()
         self.ui_config = UIConfig()
+        self.detection_config = DetectionConfig()
 # 创建全局配置实例
 config_manager = ConfigManager() 

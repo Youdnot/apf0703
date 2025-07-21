@@ -1,13 +1,8 @@
-import numpy as np
-import cv2
+from datetime import datetime
 
-cur_pos = np.array([500, 700])
+# 获取当前日期时间，格式化为字符串，精确到分钟
+current_datetime = datetime.now().strftime("%Y-%m-%d-%H:%M")
 
-window_cv_plot = np.zeros((1080, 1980, 3), dtype=np.uint8)
-cv2.rectangle(window_cv_plot, (cur_pos[0]-100, cur_pos[1]+100), (cur_pos[0] + 100, cur_pos[1] - 100), (0, 0, 255), 2)
+print(current_datetime)
 
-
-cv2.imshow("window_cv_plot", window_cv_plot)
-cv2.waitKey(10000)
-
-cv2.destroyAllWindows()
+print("outputs/" + datetime.now().strftime("%Y-%m-%d-%H%M"))

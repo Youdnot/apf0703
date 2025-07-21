@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import matplotlib.patches as patches
 
-from utils.calculate_force import get_attractive_force, get_repulsive_force, get_total_force, update_position_and_velocity
+from core.calculate_force import get_attractive_force, get_repulsive_force, get_total_force, update_position_and_velocity
 from utils.convert_coordinate import convert_coordinates
 from config import config_manager
 
@@ -33,7 +33,8 @@ cur_pos[1] -= 50
 #------------------------------------------------------------------------------
 
 # UI control
-from utils.control_unity_ui import *
+from core.ui_control import *
+from utils.keyboard_utils import *
 
 # Initialize connection and create element
 element_key = initialize_connection()

@@ -2,16 +2,14 @@
 # This script adds a textured quad to the Unity scene in camera space.
 # Press esc to stop.
 # Test continues location.
+# Reference: https://github.com/jdibenes/hl2ss/blob/main/viewer/unity_sample_hud.py
 #------------------------------------------------------------------------------
 
-from pynput import keyboard
 import sys
 import os
 
 # Add external directory to Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'external', 'hl2ss'))
-
-import threading as mt
 import hl2ss
 import hl2ss_lnm
 import hl2ss_rus
@@ -30,13 +28,11 @@ rotation = ui_config.rotation
 scale = ui_config.scale
 texture_file = ui_config.texture_file
 
-
 #------------------------------------------------------------------------------
 
 # Global variables for connection and element management
 ipc = None
 element_key = None
-stop_event = mt.Event()
 
 def initialize_connection():
     """Initialize connection to HoloLens and create the element"""
@@ -95,12 +91,6 @@ def disconnect():
         ipc.close()
         ipc = None
         element_key = None
-
-def on_press(key):
-    if (key == keyboard.Key.esc): 
-        stop_event.set()
-        return False
-    return True
 
 #------------------------------------------------------------------------------
 

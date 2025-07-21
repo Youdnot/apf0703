@@ -1,5 +1,5 @@
-from utils.camera_tracking import *
-from utils.pv_stream import *
+from core.detection import *
+from core.pv_stream import *
 
 host = '192.168.31.89'
 
