@@ -1,11 +1,5 @@
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-import matplotlib.patches as patches
-
-from core.calculate_force import get_attractive_force, get_repulsive_force, get_total_force, update_position_and_velocity
-from utils.convert_coordinate import convert_coordinates
+from core.calculate_force import *
+from utils.convert_coordinate import *
 from config import config_manager
 
 # 获取配置

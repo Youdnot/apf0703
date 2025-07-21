@@ -66,11 +66,6 @@ try:
         # 将布尔掩码转换为uint8格式用于显示
         merged_mask_display = (merged_bool_mask * 255).astype(np.uint8)
         cv2.imshow("Merged Bool Mask", merged_mask_display)
-        
-        # 打印基本信息
-        # print(f"[Frame {frame_idx}] 合并mask形状: {merged_bool_mask.shape}")
-        # print(f"[Frame {frame_idx}] 检测到的对象像素数: {np.sum(merged_bool_mask)}")
-        # print(f"[Frame {frame_idx}] 检测到的对象数量: {len(current_mask_dict.labels)}")
 
         process_image_bgr = cv2.cvtColor(process_image, cv2.COLOR_RGB2BGR)
         cv2.imshow("Live Inference", process_image_bgr)
