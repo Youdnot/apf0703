@@ -10,11 +10,11 @@ host = hololens_config.host
 # pv stream
 hl2ss_lnm.start_subsystem_pv(host, hl2ss.StreamPort.PERSONAL_VIDEO, enable_mrc=enable_mrc, shared=shared)
 
-listener = keyboard.Listener(on_press=on_press)
-listener.start()
-
 client = hl2ss_lnm.rx_pv(host, hl2ss.StreamPort.PERSONAL_VIDEO, mode=mode, width=width, height=height, framerate=framerate, profile=profile, bitrate=bitrate, decoded_format=decoded_format)
 client.open()
+
+listener = keyboard.Listener(on_press=on_press)
+listener.start()
 
 while (not stop_event.is_set()):
     data = client.get_next_packet()
