@@ -1,7 +1,7 @@
 from pynput import keyboard
-import threading as mt
+import threading
 
-stop_event = mt.Event()
+stop_event = threading.Event()
 
 def on_press(key):
     if (key == keyboard.Key.esc): 

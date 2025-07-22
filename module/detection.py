@@ -20,10 +20,8 @@ os.makedirs(output_dir, exist_ok=True)
 # Initialize the object tracker
 tracker = IncrementalObjectTracker(
     grounding_model_id="IDEA-Research/grounding-dino-tiny",
-    # sam2_model_cfg="configs/sam2.1/sam2.1_hiera_l.yaml",
-    # sam2_ckpt_path="./external/grounding_sam2/checkpoints/sam2.1_hiera_large.pt",
-    sam2_model_cfg="configs/sam2.1/sam2.1_hiera_s.yaml",
-    sam2_ckpt_path="./external/grounding_sam2/checkpoints/sam2.1_hiera_small.pt",
+    sam2_model_cfg="configs/sam2.1/sam2.1_hiera_t.yaml",
+    sam2_ckpt_path="./external/grounding_sam2/checkpoints/sam2.1_hiera_tiny.pt",
     device="cuda",
     prompt_text=prompt_text,
     detection_interval=detection_interval,
