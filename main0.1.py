@@ -1,9 +1,3 @@
-# Progres
-# pv done
-# detection done
-# force calculation
-# ui control
-
 from core.pv_stream import *
 from core.detection import *
 from core.calculate_force import *
@@ -11,6 +5,7 @@ from core.ui_control import *
 from utils.mask_utils import *
 from utils.keyboard_utils import *
 from utils.convert_coordinate import *
+from utils.thread_utils import *
 from config import config_manager
 
 #------------------------------------------------------------------------------
@@ -23,7 +18,6 @@ detection_config = config_manager.detection_config
 output_dir = detection_config.output_dir
 prompt_text = detection_config.init_prompt_text
 detection_interval = detection_config.detection_interval
-# max_frames = 300  # Maximum number of frames to process (prevents infinite loop)
 
 # Movement settings
 view_config = config_manager.view_config
@@ -42,6 +36,7 @@ converted_pos = np.array([0, 0, 0])
 
 # Initialize obstacle mask
 obstacle_mask = np.zeros((view_config.width, view_config.height), dtype=bool)
+obstacle_mask[500:600, 600:700] = True
 
 cur_pos[0] -= 100
 cur_pos[1] -= 50
@@ -54,18 +49,24 @@ os.makedirs(output_dir, exist_ok=True)
 
 #------------------------------------------------------------------------------
 
-# Initialize movement thread
-# test
-def movement_consumer(stop_event):
-    global cur_pos, cur_vel, sim_config, view_config, physics_config, path_data, obstacle_mask
+# Initialize thread functions
+def frame_producer(client, frame_queue: LifoQueue, stop_event):
     while not stop_event.is_set():
         try:
-            force, cur_pos, cur_vel, converted_pos, path_data = update_position_and_velocity(cur_pos, cur_vel, sim_config.anchor_point, obstacle_mask, view_config.width, view_config.height, physics_config.d0, physics_config.k_att, physics_config.k_rep, physics_config.damping_factor, physics_config.max_v, physics_config.dt, path_data)
-            update_position(converted_pos)
-            time.sleep(0.05)
+            data = client.get_next_packet()
+            frame = data.payload.image
+            frame_queue.put(frame)
         except Exception as e:
-            print(f"Error in movement thread: {e}")
+            print(f"Error in frame producer: {e}")
             time.sleep(0.1)
+
+def movement_consumer(mask_queue, stop_event):
+    while not stop_event.is_set():
+        obstacle_mask = mask_queue.get()
+        force, cur_pos, cur_vel, converted_pos, path_data = update_position_and_velocity(cur_pos, cur_vel, sim_config.anchor_point, obstacle_mask, view_config.width, view_config.height, physics_config.d0, physics_config.k_att, physics_config.k_rep, physics_config.damping_factor, physics_config.max_v, physics_config.dt, path_data)
+        update_position(converted_pos)
+        time.sleep(0.1)
+
 
 #------------------------------------------------------------------------------
 
@@ -85,11 +86,8 @@ tracker.set_prompt(detection_config.final_prompt_text)
 # Initialize the PV stream
 hl2ss_lnm.start_subsystem_pv(host, hl2ss.StreamPort.PERSONAL_VIDEO, enable_mrc=enable_mrc, shared=shared)
 
-client = hl2ss_lnm.rx_pv(host, hl2ss.StreamPort.PERSONAL_VIDEO, mode=mode, width=width, height=height, framerate=framerate, profile=profile, bitrate=bitrate, decoded_format=decoded_format)
-client.open()
-
-listener = keyboard.Listener(on_press=on_press)
-listener.start()
+pv_client = hl2ss_lnm.rx_pv(host, hl2ss.StreamPort.PERSONAL_VIDEO, mode=mode, width=width, height=height, framerate=framerate, profile=profile, bitrate=bitrate, decoded_format=decoded_format)
+pv_client.open()
 
 #------------------------------------------------------------------------------
 
@@ -99,31 +97,36 @@ element_key = initialize_connection()
 
 #------------------------------------------------------------------------------
 
-# Main loop
-# Open the camera (or replace with local video file, e.g., cv2.VideoCapture("video.mp4"))
-# cap = cv2.VideoCapture(0)
-# cap = cv2.VideoCapture("assets/walking test data.mp4")
-# if not cap.isOpened():
-#     print("[Error] Cannot open camera.")
-#     exit()
 
-print("[Info] Camera opened. Press 'q' to quit.")
-frame_idx = 0
+# Initialize the thread
+frame_queue = LifoQueue(maxsize=1)  # 线程安全的队列，最多存储一帧数据
+mask_queue = LifoQueue(maxsize=1)  # 线程安全的队列，最多存储一帧掩码数据
+
+# Define a stop event for keyboard listener
+stop_event = mp.Event()
+
+listener = keyboard.Listener(on_press=lambda key: on_press(stop_event, key))
+listener.start()
+
 
 # Initialize the frame producer
-stop_event = threading.Event()
+frame_producer = mp.Process(target=frame_producer, args=(pv_client, frame_queue, stop_event))
 
-frame_producer = threading.Thread(target=frame_producer, args=(client, stop_event))
+# Initialize the movement consumer
+movement_consumer = mp.Process(target=movement_consumer, args=(mask_queue, stop_event))
 
-movement_consumer = threading.Thread(target=movement_consumer, args=(stop_event,))
+#------------------------------------------------------------------------------
+
+# Main process
+frame_idx = 0
 
 frame_producer.start()
 movement_consumer.start()
 
-while True:
+while not stop_event.is_set():
     try:
-        pv_frame = frame_queue.get_nowait()
-    except queue.Empty:
+        pv_frame = frame_queue.get()
+    except frame_queue.Empty:
         time.sleep(0.01) # Wait a tiny bit if no frame is ready
         continue
 
@@ -147,27 +150,17 @@ while True:
 
     process_image_bgr = cv2.cvtColor(process_image, cv2.COLOR_RGB2BGR)
     cv2.imshow("Live Inference", process_image_bgr)
-    
-    # 添加waitKey以确保窗口更新
-    key = cv2.waitKey(1) & 0xFF
-    if key == ord('q'):
-        print("[Info] Quit signal received.")
-        break
+    cv2.waitKey(1)
+
+    # Transpose and flip the maskto match the coordinate system
+    obstacle_mask = np.flip(merged_bool_mask.T, axis=(1))
+    mask_queue.put(obstacle_mask)
 
     # tracker.save_current_state(output_dir=output_dir, raw_image=pv_frame)
     frame_idx += 1
 
-    # if frame_idx >= max_frames:
-    #     print(f"[Info] Reached max_frames {max_frames}. Stopping.")
-    #     break
-
-    #------------------------------------------------------------------------------
-    # UI control
-
-    # Transpose and flip the maskto match the coordinate system
-    obstacle_mask = np.flip(merged_bool_mask.T, axis=(1))
-
-client.close()
+# Stop and clean up
+pv_client.close()
 disconnect()    # disconnect from the UI stream
 listener.join()
 
