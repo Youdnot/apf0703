@@ -11,6 +11,7 @@ from core.ui_control import *
 from utils.mask_utils import *
 from utils.keyboard_utils import *
 from utils.convert_coordinate import *
+from utils.thread_utils import *
 from config import config_manager
 
 #------------------------------------------------------------------------------
@@ -62,7 +63,7 @@ def movement_consumer(stop_event):
         try:
             force, cur_pos, cur_vel, converted_pos, path_data = update_position_and_velocity(cur_pos, cur_vel, sim_config.anchor_point, obstacle_mask, view_config.width, view_config.height, physics_config.d0, physics_config.k_att, physics_config.k_rep, physics_config.damping_factor, physics_config.max_v, physics_config.dt, path_data)
             update_position(converted_pos)
-            time.sleep(0.05)
+            time.sleep(0.01)
         except Exception as e:
             print(f"Error in movement thread: {e}")
             time.sleep(0.1)
@@ -122,7 +123,8 @@ movement_consumer.start()
 
 while True:
     try:
-        pv_frame = frame_queue.get_nowait()
+        with threading.Lock():
+            pv_frame = frame_queue.get_nowait()
     except queue.Empty:
         time.sleep(0.01) # Wait a tiny bit if no frame is ready
         continue
