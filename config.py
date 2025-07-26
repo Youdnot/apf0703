@@ -21,9 +21,9 @@ class WindowConfig:
 @dataclass
 class PhysicsConfig:
     """物理参数配置"""
-    k_att: float = 20.0  # 吸引力系数
-    k_rep: float = 60.0  # 排斥力系数
-    damping_factor: float = 1.0  # 阻尼系数
+    k_att: float = 1.0  # 吸引力系数
+    k_rep: float = 3.0  # 排斥力系数
+    damping_factor: float = 1  # 阻尼系数
     d0: float = 200.0  # 障碍物影响范围
     max_v: float = 100.0  # 最大速度
     dt: float = 0.1  # 时间步长
@@ -31,9 +31,9 @@ class PhysicsConfig:
 @dataclass
 class SimulationConfig:
     """仿真配置参数"""
-    anchor_point: np.ndarray = np.array([500, 700])
-    init_pos: np.ndarray = np.array([500, 700])
-    init_vel: np.ndarray = np.array([0, 0])
+    anchor_point: np.ndarray = np.array([500.0, 500.0])
+    init_pos: np.ndarray = np.array([500.0, 500.0])
+    init_vel: np.ndarray = np.array([0.0, 0.0])
 
 @dataclass
 class HololensConfig:

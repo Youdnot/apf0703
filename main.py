@@ -119,15 +119,19 @@ frame_producer = threading.Thread(target=frame_producer, args=(client, stop_even
 movement_consumer = threading.Thread(target=movement_consumer, args=(stop_event,))
 
 frame_producer.start()
+time.sleep(2)
 movement_consumer.start()
 
 while True:
-    try:
-        with threading.Lock():
-            pv_frame = frame_queue.get_nowait()
-    except queue.Empty:
-        time.sleep(0.01) # Wait a tiny bit if no frame is ready
-        continue
+    # 持续重试直到获取到帧
+    while True:
+        try:
+            with threading.Lock():
+                pv_frame = frame_queue.get_nowait()
+            break  # 成功获取到帧，跳出内层循环
+        except queue.Empty:
+            time.sleep(0.01)  # 短暂等待后重试
+            continue
 
     print(f"[Frame {frame_idx}] Processing live frame...")
     process_image = tracker.add_image(pv_frame)
