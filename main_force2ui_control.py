@@ -19,7 +19,7 @@ converted_pos = np.array([0, 0, 0])
 
 # Initialize obstacle mask
 obstacle_mask = np.zeros((view_config.width, view_config.height), dtype=bool)
-obstacle_mask[300:750, 250:800] = True
+obstacle_mask[500:750, 500:800] = True
 
 
 #------------------------------------------------------------------------------

@@ -15,12 +15,20 @@ def get_attractive_force(position: np.ndarray, anchor: np.ndarray) -> np.ndarray
     attractive_force = anchor - position
     modulus = np.linalg.norm(attractive_force)
     
-    # 设置最小距离，避免在邻近锚定点的位置产生振荡
-    if modulus >= 10:
-        # 返回单位向量
-        attractive_force = attractive_force / modulus
-    else:
-        attractive_force = np.zeros(2)
+    # # 设置最小距离，避免在邻近锚定点的位置产生振荡
+    # if modulus >= 10:
+    #     # 返回单位向量
+    #     attractive_force = attractive_force / modulus
+    # else:
+    #     attractive_force = np.zeros(2)
+
+    # limit the force
+    limit_value = 10
+    if modulus > limit_value:
+        attractive_force = attractive_force*(limit_value/modulus)
+
+    # reture true value
+
     
     return attractive_force
 
@@ -92,8 +100,8 @@ def get_repulsive_force(position: np.ndarray, anchor: np.ndarray,
         repulsive_force = np.array([total_force_x, total_force_y])
 
         # 处理停滞 - 如果周围障碍物密度过高，添加小扰动
-        density_threshold = 0.8  # 密度阈值，例如80%
-        small_magnitude = 0.05  # 可调整扰动幅度
+        density_threshold = 0.9  # 密度阈值
+        small_magnitude = 3  # 可调整扰动幅度
 
         obstacle_density = np.sum(final_mask) / np.sum(influence_mask) if np.sum(influence_mask) > 0 else 0
         
@@ -107,11 +115,16 @@ def get_repulsive_force(position: np.ndarray, anchor: np.ndarray,
         
         modulus = np.linalg.norm(repulsive_force)
 
-        # 返回单位向量
-        if modulus > 1e-2:
-            repulsive_force = repulsive_force / modulus
-        else:
-            repulsive_force = np.zeros(2)
+        # # 返回单位向量
+        # if modulus > 1e-2:
+        #     repulsive_force = repulsive_force / modulus
+        # else:
+        #     repulsive_force = np.zeros(2)
+
+        # limit the force
+        limit_value = 100
+        if modulus > limit_value:
+            repulsive_force = repulsive_force*(limit_value/modulus)
 
     else:
         repulsive_force = np.zeros(2)
@@ -121,6 +134,7 @@ def get_repulsive_force(position: np.ndarray, anchor: np.ndarray,
 def get_total_force(position: np.ndarray, anchor: np.ndarray, obstacle_mask: np.ndarray, view_width: int, view_height: int, d0: float, k_att: float, k_rep: float) -> np.ndarray:
     attractive_force = get_attractive_force(position, anchor)
     repulsive_force = get_repulsive_force(position, anchor, obstacle_mask, view_width, view_height, d0)
+    print(f"Attractive Force: {attractive_force}, Repulsive Force: {repulsive_force}")
     total_force = k_att * attractive_force + k_rep * repulsive_force
     return total_force
 
@@ -155,24 +169,24 @@ def update_position_and_velocity(cur_pos: np.ndarray, cur_vel: np.ndarray,
     force = get_total_force(cur_pos, anchor_point, obstacle_mask, view_width, view_height, d0, k_att, k_rep)
     print(f"Force: {force}, Force Norm: {np.linalg.norm(force)}")
 
-    # 计算到最近障碍物点的距离
-    if obstacle_mask.any():
-        obstacle_positions = np.argwhere(obstacle_mask)
-        distances = np.linalg.norm(obstacle_positions - cur_pos, axis=1)
-        min_distance = np.min(distances)
-        print(f"min_distance: {min_distance}")
+    # # 计算到最近障碍物点的距离
+    # if obstacle_mask.any():
+    #     obstacle_positions = np.argwhere(obstacle_mask)
+    #     distances = np.linalg.norm(obstacle_positions - cur_pos, axis=1)
+    #     min_distance = np.min(distances)
+    #     print(f"min_distance: {min_distance}")
 
-        # 如果距离最近的障碍物点小于阈值，则保持稳定
-        # 阈值为边界间隙和中心点到边缘的距离
-        if np.linalg.norm(min_distance) < 10+60:
-            force = np.zeros(2)
+    #     # 如果距离最近的障碍物点小于阈值，则保持稳定
+    #     # 阈值为边界间隙和中心点到边缘的距离
+    #     if np.linalg.norm(min_distance) < 10+60:
+    #         force = np.zeros(2)
     
     cur_vel = damping_factor * force + (1 - damping_factor) * cur_vel
-    # 处理速度为0的情况
-    if np.linalg.norm(cur_vel) > 1e-2:
-        cur_vel /= np.linalg.norm(cur_vel)
-    else:
-        cur_vel = np.zeros(2)
+    # # 处理速度为0的情况
+    # if np.linalg.norm(cur_vel) > 1e-2:
+    #     cur_vel /= np.linalg.norm(cur_vel)
+    # else:
+    #     cur_vel = np.zeros(2)
     # 不要直接对cur_vel进行缩放，不然后续再对其进行渐近化处理会出问题，尺度对不上
     cur_pos = cur_pos + cur_vel*max_v*dt
 

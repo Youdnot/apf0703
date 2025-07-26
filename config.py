@@ -22,10 +22,10 @@ class WindowConfig:
 class PhysicsConfig:
     """物理参数配置"""
     k_att: float = 1.0  # 吸引力系数
-    k_rep: float = 3.0  # 排斥力系数
+    k_rep: float = 10.0  # 排斥力系数
     damping_factor: float = 1  # 阻尼系数
-    d0: float = 200.0  # 障碍物影响范围
-    max_v: float = 100.0  # 最大速度
+    d0: float = 400.0  # 障碍物影响范围
+    max_v: float = 10.0  # 最大速度
     dt: float = 0.1  # 时间步长
 
 @dataclass
@@ -51,7 +51,7 @@ class UIConfig:
     rotation = [0, 0, 0, 1]
 
     # Scale (x, y, z) in meters
-    scale = 0.05
+    scale = 0.08
     scale = [scale, scale, 1]
     # ratio = 1920/1080
     # scale = [ratio*scale, scale, 1]

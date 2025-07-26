@@ -4,6 +4,8 @@
 # force calculation
 # ui control
 
+# 这个版本有很多normalization，导致在该达到平衡点的位置会不断的出现抖动，且运动始终保持匀速，没有渐近性，所有力的计算最终都只会指导方向
+
 from core.pv_stream import *
 from core.detection import *
 from core.calculate_force import *
