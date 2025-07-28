@@ -23,7 +23,7 @@ def get_attractive_force(position: np.ndarray, anchor: np.ndarray) -> np.ndarray
     #     attractive_force = np.zeros(2)
 
     # limit the force
-    limit_value = 10
+    limit_value = 20
     if modulus > limit_value:
         attractive_force = attractive_force*(limit_value/modulus)
 
@@ -101,7 +101,7 @@ def get_repulsive_force(position: np.ndarray, anchor: np.ndarray,
 
         # 处理停滞 - 如果周围障碍物密度过高，添加小扰动
         density_threshold = 0.9  # 密度阈值
-        small_magnitude = 3  # 可调整扰动幅度
+        small_magnitude = 1  # 可调整扰动幅度
 
         obstacle_density = np.sum(final_mask) / np.sum(influence_mask) if np.sum(influence_mask) > 0 else 0
         
