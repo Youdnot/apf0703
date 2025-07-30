@@ -63,8 +63,8 @@ def get_repulsive_force(position: np.ndarray, anchor: np.ndarray,
         anchor_distances = np.sqrt((x_coords - anchor[0])**2 + (y_coords - anchor[1])**2)
         
         # 避免除零错误，设置最小距离
-        window_distances = np.maximum(window_distances, 1e-6)
-        anchor_distances = np.maximum(anchor_distances, 1e-6)
+        window_distances = np.maximum(window_distances, 1)
+        anchor_distances = np.maximum(anchor_distances, 1)
         
         # 计算影响范围掩码
         window_influence_mask = window_distances <= d0
@@ -88,8 +88,8 @@ def get_repulsive_force(position: np.ndarray, anchor: np.ndarray,
         window_distances_y = position[1] - y_coords
 
         # 替换0值，避免除零
-        window_distances_x[window_distances_x == 0]= 1e-6
-        window_distances_y[window_distances_y == 0]= 1e-6
+        # window_distances_x[window_distances_x == 0]= 1e-6
+        # window_distances_y[window_distances_y == 0]= 1e-6
         
         # 计算各方向的排斥力分量
         force_x = repulsive_coefficient * window_distances_x
@@ -103,7 +103,7 @@ def get_repulsive_force(position: np.ndarray, anchor: np.ndarray,
 
         # 处理停滞 - 如果周围障碍物密度过高，添加小扰动
         density_threshold = 0.9  # 密度阈值
-        small_magnitude = 0.01  # 可调整扰动幅度
+        small_magnitude = 0.1  # 可调整扰动幅度
 
         obstacle_density = np.sum(final_mask) / np.sum(influence_mask) if np.sum(influence_mask) > 0 else 0
         
@@ -112,7 +112,11 @@ def get_repulsive_force(position: np.ndarray, anchor: np.ndarray,
             attractive_force = get_attractive_force(position, anchor)
             # 添加定向扰动
             # 这里取负号是因为要反向扰动，因为吸引力是向锚点方向的
-            perturbation = -attractive_force * small_magnitude
+            perturbation = -attractive_force/np.linalg.norm(attractive_force)*small_magnitude
+            
+            # 限制斥力幅度，避免过大
+            repulsive_force *= 0.5
+            
             repulsive_force += perturbation
         
         modulus = np.linalg.norm(repulsive_force)
