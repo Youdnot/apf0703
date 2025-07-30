@@ -44,9 +44,6 @@ converted_pos = np.array([0, 0, 0])
 # Initialize obstacle mask
 obstacle_mask = np.zeros((view_config.width, view_config.height), dtype=bool)
 
-cur_pos[0] -= 100
-cur_pos[1] -= 50
-
 os.makedirs(output_dir, exist_ok=True)
 
 # Set mirror for huggingface
@@ -66,7 +63,7 @@ def movement_consumer(stop_event):
             time.sleep(0.01)
         except Exception as e:
             print(f"Error in movement thread: {e}")
-            time.sleep(0.1)
+            continue
 
 #------------------------------------------------------------------------------
 
@@ -122,11 +119,12 @@ frame_producer.start()
 time.sleep(2)
 movement_consumer.start()
 
+# 修改主循环中的队列访问
 while True:
     # 持续重试直到获取到帧
     while True:
         try:
-            with threading.Lock():
+            with lock:  # 使用共享锁
                 pv_frame = frame_queue.get_nowait()
             break  # 成功获取到帧，跳出内层循环
         except queue.Empty:

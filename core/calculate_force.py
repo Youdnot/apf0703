@@ -23,7 +23,7 @@ def get_attractive_force(position: np.ndarray, anchor: np.ndarray) -> np.ndarray
     #     attractive_force = np.zeros(2)
 
     # limit the force
-    limit_value = 20
+    limit_value = 40
     if modulus > limit_value:
         attractive_force = attractive_force*(limit_value/modulus)
 
@@ -103,7 +103,7 @@ def get_repulsive_force(position: np.ndarray, anchor: np.ndarray,
 
         # 处理停滞 - 如果周围障碍物密度过高，添加小扰动
         density_threshold = 0.9  # 密度阈值
-        small_magnitude = 1  # 可调整扰动幅度
+        small_magnitude = 0.01  # 可调整扰动幅度
 
         obstacle_density = np.sum(final_mask) / np.sum(influence_mask) if np.sum(influence_mask) > 0 else 0
         
@@ -170,26 +170,8 @@ def update_position_and_velocity(cur_pos: np.ndarray, cur_vel: np.ndarray,
     # 计算当前力
     force = get_total_force(cur_pos, anchor_point, obstacle_mask, view_width, view_height, d0, k_att, k_rep)
     print(f"Force: {force}, Force Norm: {np.linalg.norm(force)}")
-
-    # # 计算到最近障碍物点的距离
-    # if obstacle_mask.any():
-    #     obstacle_positions = np.argwhere(obstacle_mask)
-    #     distances = np.linalg.norm(obstacle_positions - cur_pos, axis=1)
-    #     min_distance = np.min(distances)
-    #     print(f"min_distance: {min_distance}")
-
-    #     # 如果距离最近的障碍物点小于阈值，则保持稳定
-    #     # 阈值为边界间隙和中心点到边缘的距离
-    #     if np.linalg.norm(min_distance) < 10+60:
-    #         force = np.zeros(2)
     
     cur_vel = damping_factor * force + (1 - damping_factor) * cur_vel
-    # # 处理速度为0的情况
-    # if np.linalg.norm(cur_vel) > 1e-2:
-    #     cur_vel /= np.linalg.norm(cur_vel)
-    # else:
-    #     cur_vel = np.zeros(2)
-    # 不要直接对cur_vel进行缩放，不然后续再对其进行渐近化处理会出问题，尺度对不上
     cur_pos = cur_pos + cur_vel*max_v*dt
 
     # test convertion

@@ -31,8 +31,9 @@ class PhysicsConfig:
 @dataclass
 class SimulationConfig:
     """仿真配置参数"""
-    anchor_point: np.ndarray = np.array([500.0, 500.0])
-    init_pos: np.ndarray = np.array([500.0, 500.0])
+    # [width, height]
+    anchor_point: np.ndarray = np.array([700.0, 350.0])
+    init_pos: np.ndarray = np.array([700.0, 350.0])
     init_vel: np.ndarray = np.array([0.0, 0.0])
 
 @dataclass
