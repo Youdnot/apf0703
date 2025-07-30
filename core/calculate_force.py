@@ -32,6 +32,9 @@ def get_attractive_force(position: np.ndarray, anchor: np.ndarray) -> np.ndarray
     
     return attractive_force
 
+# 生成坐标网格
+x_coords, y_coords = np.mgrid[0:1920, 0:1080]
+
 def get_repulsive_force(position: np.ndarray, anchor: np.ndarray, 
                        obstacle_mask: np.ndarray, view_width: int, 
                        view_height: int, d0: float) -> np.ndarray:
@@ -52,10 +55,9 @@ def get_repulsive_force(position: np.ndarray, anchor: np.ndarray,
     Returns:
         np.ndarray: 排斥力单位向量 [x, y]
     """
+    global x_coords, y_coords
+    
     if obstacle_mask.any():
-        # 生成坐标网格
-        x_coords, y_coords = np.mgrid[0:view_width, 0:view_height]
-        
         # 计算到当前位置和锚点的距离矩阵
         window_distances = np.sqrt((x_coords - position[0])**2 + (y_coords - position[1])**2)
         anchor_distances = np.sqrt((x_coords - anchor[0])**2 + (y_coords - anchor[1])**2)
