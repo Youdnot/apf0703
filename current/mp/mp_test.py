@@ -39,6 +39,14 @@ class BoundedStack:
             item = self._stack.pop()
             return item
 
+    def empty(self):
+        with self._mutex:
+            return len(self._stack) == 0
+
+    def full(self):
+        with self._mutex:
+            return self.maxsize > 0 and len(self._stack) >= self.maxsize
+
 # def producer(q):
 #     for i in range(10):
 #         q.push(i)

@@ -83,5 +83,7 @@ class ConfigManager:
         self.hololens_config = HololensConfig()
         self.ui_config = UIConfig()
         self.detection_config = DetectionConfig()
+
+
 # 创建全局配置实例
 config_manager = ConfigManager() 

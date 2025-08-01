@@ -1,5 +1,5 @@
 from core.eet_stream import *
-from utils.keyboard_utils import *
+from utils.thread_utils import *
 from config import config_manager
 
 hololens_config = config_manager.hololens_config

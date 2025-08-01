@@ -222,7 +222,7 @@ class IncrementalObjectTracker:
             # 1.1 GroundingDINO object detection
             boxes, labels = self.grounding_predictor.predict(img_pil, self.prompt_text)
             if boxes.shape[0] == 0:
-                return
+                return image_np
 
             # 1.2 SAM2 segmentation from detection boxes
             self.sam2_segmentor.set_image(image_np)

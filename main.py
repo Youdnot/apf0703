@@ -9,14 +9,14 @@ from core.detection import *
 from core.calculate_force import *
 from core.ui_control import *
 from utils.mask_utils import *
-from utils.keyboard_utils import *
 from utils.convert_coordinate import *
 from utils.thread_utils import *
-from config import config_manager
+from config import *
 
 #------------------------------------------------------------------------------
 
 # Parameter settings
+config_manager = ConfigManager()
 hololens_config = config_manager.hololens_config
 host = hololens_config.host
 
@@ -32,8 +32,8 @@ window_config = config_manager.window_config
 physics_config = config_manager.physics_config
 sim_config = config_manager.sim_config
 
-# 初始化路径数据
-path_data = [sim_config.init_pos.copy()]
+# # 初始化路径数据
+# path_data = [sim_config.init_pos.copy()]
 
 # 当前位置和速度
 cur_pos = sim_config.init_pos.copy()
@@ -50,20 +50,6 @@ os.makedirs(output_dir, exist_ok=True)
 # Don't seem to work
 # os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 
-#------------------------------------------------------------------------------
-
-# Initialize movement thread
-# test
-def movement_consumer(stop_event):
-    global cur_pos, cur_vel, sim_config, view_config, physics_config, path_data, obstacle_mask
-    while not stop_event.is_set():
-        try:
-            force, cur_pos, cur_vel, converted_pos, path_data = update_position_and_velocity(cur_pos, cur_vel, sim_config.anchor_point, obstacle_mask, view_config.width, view_config.height, physics_config.d0, physics_config.k_att, physics_config.k_rep, physics_config.damping_factor, physics_config.max_v, physics_config.dt, path_data)
-            update_position(converted_pos)
-            time.sleep(0.01)
-        except Exception as e:
-            print(f"Error in movement thread: {e}")
-            continue
 
 #------------------------------------------------------------------------------
 
@@ -109,11 +95,9 @@ print("[Info] Camera opened. Press 'q' to quit.")
 frame_idx = 0
 
 # Initialize the frame producer
-stop_event = threading.Event()
+frame_producer = Process(target=frame_producer, args=(client, stop_event))
 
-frame_producer = threading.Thread(target=frame_producer, args=(client, stop_event))
-
-movement_consumer = threading.Thread(target=movement_consumer, args=(stop_event,))
+movement_consumer = Process(target=movement_consumer, args=(sim_config, view_config, physics_config, stop_event))
 
 frame_producer.start()
 time.sleep(2)
@@ -124,10 +108,12 @@ while True:
     # 持续重试直到获取到帧
     while True:
         try:
-            with lock:  # 使用共享锁
-                pv_frame = frame_queue.get_nowait()
+            pv_frame = frame_queue.pop()
             break  # 成功获取到帧，跳出内层循环
-        except queue.Empty:
+        except Exception as e:
+            print(f"Error in frame consumer: {e}")
+            continue
+        except frame_queue.empty():
             time.sleep(0.01)  # 短暂等待后重试
             continue
 
@@ -170,6 +156,8 @@ while True:
 
     # Transpose and flip the maskto match the coordinate system
     obstacle_mask = np.flip(merged_bool_mask.T, axis=(1))
+
+    mask_queue.push(obstacle_mask)
 
 client.close()
 disconnect()    # disconnect from the UI stream
