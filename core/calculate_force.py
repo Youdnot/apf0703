@@ -140,7 +140,7 @@ def get_repulsive_force(position: np.ndarray, anchor: np.ndarray,
 def get_total_force(position: np.ndarray, anchor: np.ndarray, obstacle_mask: np.ndarray, view_width: int, view_height: int, d0: float, k_att: float, k_rep: float) -> np.ndarray:
     attractive_force = get_attractive_force(position, anchor)
     repulsive_force = get_repulsive_force(position, anchor, obstacle_mask, view_width, view_height, d0)
-    print(f"Attractive Force: {attractive_force}, Repulsive Force: {repulsive_force}")
+    # print(f"Attractive Force: {attractive_force}, Repulsive Force: {repulsive_force}")
     total_force = k_att * attractive_force + k_rep * repulsive_force
     return total_force
 
@@ -173,7 +173,7 @@ def update_position_and_velocity(cur_pos: np.ndarray, cur_vel: np.ndarray,
     """
     # 计算当前力
     force = get_total_force(cur_pos, anchor_point, obstacle_mask, view_width, view_height, d0, k_att, k_rep)
-    print(f"Force: {force}, Force Norm: {np.linalg.norm(force)}")
+    # print(f"Force: {force}, Force Norm: {np.linalg.norm(force)}")
     
     cur_vel = damping_factor * force + (1 - damping_factor) * cur_vel
     cur_pos = cur_pos + cur_vel*max_v*dt
@@ -181,7 +181,7 @@ def update_position_and_velocity(cur_pos: np.ndarray, cur_vel: np.ndarray,
     # test convertion
     converted_pos = convert_coordinates(cur_pos)
 
-    print(f"Current Position: {cur_pos}, Current Velocity: {cur_vel}, Converted Position: {converted_pos}")
+    # print(f"Current Position: {cur_pos}, Current Velocity: {cur_vel}, Converted Position: {converted_pos}")
     
     path_data.append(cur_pos.copy())
 

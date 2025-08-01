@@ -22,7 +22,7 @@ class WindowConfig:
 class PhysicsConfig:
     """物理参数配置"""
     k_att: float = 0.4  # 吸引力系数
-    k_rep: float = 20.0  # 排斥力系数
+    k_rep: float = 30.0  # 排斥力系数
     damping_factor: float = 1  # 阻尼系数
     d0: float = 400.0  # 障碍物影响范围
     max_v: float = 15.0  # 最大速度

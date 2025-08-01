@@ -30,7 +30,7 @@ shared = False
 # Ignored in shared mode
 width     = 1920
 height    = 1080
-framerate = 30  # only 15 or 30 is available
+framerate = 15  # only 15 or 30 is available
 
 # Video encoding profile and bitrate (None = default)
 profile = hl2ss.VideoProfile.H265_MAIN
