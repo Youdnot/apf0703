@@ -108,7 +108,7 @@ while True:
     # 持续重试直到获取到帧
     while True:
         try:
-            pv_frame = frame_queue.pop()
+            pv_frame = frame_queue.peek()
             break  # 成功获取到帧，跳出内层循环
         except Exception as e:
             print(f"Error in frame consumer: {e}")
