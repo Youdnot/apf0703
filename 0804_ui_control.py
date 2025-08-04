@@ -50,30 +50,68 @@ ipc.open()
 
 key = 0
 
-display_list = hl2ss_rus.command_buffer()
-display_list.begin_display_list() # Begin command sequence
-display_list.remove_all() # Remove all objects that were created remotely
-display_list.create_primitive(hl2ss_rus.PrimitiveType.Quad) # Create a quad, server will return its id
-display_list.set_target_mode(hl2ss_rus.TargetMode.UseLast) # Set server to use the last created object as target, this avoids waiting for the id of the quad
-display_list.set_local_transform(key, position, rotation, scale) # Set the local transform of the cube
-display_list.set_color(key, rgba) # Set the color of the cube
-display_list.set_active(key, hl2ss_rus.ActiveState.Active) # Make the quad visible
-display_list.set_target_mode(hl2ss_rus.TargetMode.UseID) # Restore target mode
-display_list.end_display_list() # End command sequence
-ipc.push(display_list) # Send commands to server
-results = ipc.pull(display_list) # Get results from server
-# key = results[2] # Get the quad id, created by the 3rd command in the list
-key = [x for x in results if x != 1][0] # Get the one and only non-1 id in result
-print(results)
-print(f'Created quad with id {key}')
 
+# 这个函数还是太麻烦了，而且处理不了text的创建
+# 后续改为每种元素一个函数
+def create_element(ipc, key,
+                   primitive_type: str,
+                   position, rotation, scale,
+                   rgba, texture=None):
+    """Create a UI element on HoloLens
+    primitive_type: 'Quad', 'Cube', 'Sphere'
+    Applying texture is not included since don't need here.
+    """
+    # Map string to hl2ss_rus.PrimitiveType enum
+    ptype_map = {
+        'Quad': hl2ss_rus.PrimitiveType.Quad,
+        'Cube': hl2ss_rus.PrimitiveType.Cube,
+        'Sphere': hl2ss_rus.PrimitiveType.Sphere,
+    }
+    
+    if primitive_type not in ptype_map:
+        raise ValueError(f"Invalid primitive_type: {primitive_type}. Supported types are {list(ptype_map.keys())}")
+
+    display_list = hl2ss_rus.command_buffer()
+    display_list.begin_display_list() # Begin command sequence
+    # display_list.remove_all() # Remove all objects that were created remotely
+    display_list.create_primitive(ptype_map[primitive_type]) # Create a primitive, server will return its id
+    display_list.set_target_mode(hl2ss_rus.TargetMode.UseLast) # Set server to use the last created object as target, this avoids waiting for the id of the quad
+    display_list.set_local_transform(key, position, rotation, scale) # Set the local transform of the cube
+    display_list.set_color(key, rgba) # Set the color of the cube
+    display_list.set_active(key, hl2ss_rus.ActiveState.Active) # Make the quad visible
+    display_list.set_target_mode(hl2ss_rus.TargetMode.UseID) # Restore target mode
+    display_list.end_display_list() # End command sequence
+    ipc.push(display_list) # Send commands to server
+    results = ipc.pull(display_list) # Get results from server
+    print(results)
+    # key = results[2] # Get the quad id, created by the 3rd command in the list
+    key = [x for x in results if x != 1][0] # Get the one and only non-1 id in result
+    print(f'Created {primitive_type} with id {key}')
+
+    return key
+
+def destroy_element(ipc, key):
+    """Destroy a UI element on HoloLens"""
+    command_buffer = hl2ss_rus.command_buffer()
+    command_buffer.remove(key) # Destroy the element
+    ipc.push(command_buffer)
+    results = ipc.pull(command_buffer) # Get results from server
+    print(f'Destroyed element with id {key}')
+    return results
+
+
+#------------------------------------------------------------------------------
+
+key = create_element(ipc, key,
+                   primitive_type='Quad',
+                   position=position, rotation=rotation, scale=scale,
+                   rgba=rgba)
 
 stop_event.wait()
 
-command_buffer = hl2ss_rus.command_buffer()
-command_buffer.remove(key) # Destroy quad
-ipc.push(command_buffer)
-results = ipc.pull(command_buffer)
+# time.sleep(3)
+
+results = destroy_element(ipc, key)
 
 ipc.close()
 
