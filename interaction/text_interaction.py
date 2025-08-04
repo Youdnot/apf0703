@@ -76,6 +76,34 @@ def create_text(key, font_size, rgba, text, position, rotation, scale):
     print(f'Changed text object "{text}" with id {key}')
     return key
 
+# Initialize background
+def create_background(position=None):
+    '''Create a background quad'''
+    if position:
+        bg_position = position
+    else:
+        bg_position = [0, 0, 0.55]
+    bg_rotation = [0, 0, 0, 1]
+    bg_scale = [0.2, 0.15, 0.01]
+    bg_rgba = [0.1, 0.1, 0.8, 1]
+
+    bg_key = 0
+
+    display_list = hl2ss_rus.command_buffer()
+    display_list.begin_display_list() # Begin command sequence
+    display_list.create_primitive(hl2ss_rus.PrimitiveType.Cube) # Create a quad, server will return its id
+    display_list.set_target_mode(hl2ss_rus.TargetMode.UseLast) # Set server to use the last created object as target, this avoids waiting for the id of the quad
+    display_list.set_local_transform(bg_key, bg_position, bg_rotation, bg_scale) # Set the local transform of the cube
+    display_list.set_color(bg_key, bg_rgba) # Set the color of the cube
+    display_list.set_active(bg_key, hl2ss_rus.ActiveState.Active) # Make the quad visible
+    display_list.set_target_mode(hl2ss_rus.TargetMode.UseID) # Restore target mode
+    display_list.end_display_list() # End command sequence
+    ipc.push(display_list) # Send commands to server
+    results = ipc.pull(display_list) # Get results from server
+    bg_key = results[2] # Get the quad id, created by the 3rd command in the list
+
+    return bg_key
+
 # Read the sequence file
 with open('assets/cpt_sequence.json', 'r') as f:
     sequence = json.load(f)
@@ -117,6 +145,12 @@ key = results[2] # Get the text object id, created by the 3rd command in the lis
 
 time.sleep(5)
 
+# Adjust the text position for the sequence
+position = [0.08, -0.08, 0.5]
+bg_position = [position[0], position[1], position[2]+0.01]
+print(f"Background position: {bg_position}")
+
+bg_key = create_background(bg_position)
 
 # Start the sequence
 try:
@@ -141,6 +175,8 @@ stop_event.wait()
 
 command_buffer = hl2ss_rus.command_buffer()
 command_buffer.remove(key) # Destroy text object
+command_buffer.remove(bg_key) # Destroy background quad
+command_buffer.remove_all() # Remove all objects that were created remotely
 ipc.push(command_buffer)
 results = ipc.pull(command_buffer)
 
