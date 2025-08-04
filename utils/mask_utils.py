@@ -66,3 +66,7 @@ def get_merged_bool_mask(mask_dict: MaskDictionaryModel) -> np.ndarray:
             merged_mask = merged_mask | mask_cpu
     
     return merged_mask
+
+# 新增距离检测逻辑
+# 主要功能是当mask对应的距离在检测范围之内时使其有效，不在范围内时使其无效
+# 理应有一个bool值变量辅助后续处理，这里可能分离之后判断mask是否为空更好

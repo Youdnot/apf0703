@@ -1,24 +1,6 @@
-import time
-from multiprocessing import Process, Queue, Lock, Manager, Condition, Event
-from queue import Empty, Full
-from pynput import keyboard
+results = [1, 4294938646, 1, 1, 1, 1, 1, 1]
 
-stop_event = Event()
+# 使用列表推导式找到所有不等于 1 的 ID
+special_ids = [x for x in results if x != 1][0]
 
-def on_press(key):
-    if (key == keyboard.Key.esc): 
-        stop_event.set()
-        return False
-    return True
-
-
-if __name__ == "__main__":
-    listener = keyboard.Listener(on_press=on_press)
-    listener.start()
-
-    while not stop_event.is_set():
-        print(stop_event.is_set())
-        time.sleep(0.1)
-
-    listener.stop()
-    listener.join()
+print(special_ids)

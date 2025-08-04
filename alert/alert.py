@@ -128,21 +128,22 @@ for frame_dict in frame:
         frame_dict['rgba']
     )
     key_list.append(key)
+    print(f'Frame created with key: {key}')
 
 
 # Stop and clean up
 stop_event.wait()
 
 # Clean frame UI
-clean()
+# clean()
 # 直接clean可以解决，但是如果要和显示UI混合使用的话这样不太合理
 
 # 以下方法无法工作
-# for key in key_list:
-#     command_buffer = hl2ss_rus.command_buffer()
-#     command_buffer.remove(key) # Destroy cube
-#     ipc.push(command_buffer)
-#     results = ipc.pull(command_buffer)
+for key in key_list:
+    command_buffer = hl2ss_rus.command_buffer()
+    command_buffer.remove(key) # Destroy cube
+    ipc.push(command_buffer)
+    results = ipc.pull(command_buffer)
 
 ipc.close()
 disconnect()
