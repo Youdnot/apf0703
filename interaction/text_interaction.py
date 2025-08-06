@@ -5,7 +5,7 @@
 
 from pynput import keyboard
 
-import threading as mt
+from multiprocessing import Event
 import time
 import os
 import sys
@@ -13,7 +13,7 @@ import json
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from core.ui_control import *
+from core.create_ui_element import create_element_quad, create_element_text, update_text, destroy_element, hl2ss, hl2ss_rus, hl2ss_lnm
 
 # Settings --------------------------------------------------------------------
 
@@ -40,7 +40,8 @@ scale = [2, 2, 1]
 
 #------------------------------------------------------------------------------
 
-stop_event = mt.Event()
+# Define stop event
+stop_event = Event()
 
 def on_press(key):
     if (key == keyboard.Key.esc):
@@ -56,73 +57,6 @@ ipc.open()
 
 key = 0
 
-def init_text(key):
-    '''Initialize the display'''
-    print("Initializing display...")
-    display_list = hl2ss_rus.command_buffer()
-    display_list.begin_display_list() # Begin command sequence
-    display_list.remove_all() # Remove all objects that were created remotely
-    display_list.create_text() # Create text object, server will return its id
-    display_list.set_target_mode(hl2ss_rus.TargetMode.UseLast) # Set server to use the last created object as target, this avoids waiting for the id of the text object
-    display_list.set_text(key, font_size, rgba, text) # Set text
-    display_list.set_local_transform(key, position, rotation, scale=[1, 1, 1]) # Set the local transform
-    display_list.set_active(key, hl2ss_rus.ActiveState.Active) # Make the text object visible
-    display_list.set_target_mode(hl2ss_rus.TargetMode.UseID) # Restore target mode
-    display_list.end_display_list() # End command sequence
-    ipc.push(display_list) # Send commands to server
-    results = ipc.pull(display_list) # Get results from server
-    key = results[2] # Get the text object id, created by the 3rd command in the list
-
-    return key
-
-def update_text(key, font_size, rgba, text, position, rotation, scale):
-    '''Update text based on the initial object id'''
-    display_list = hl2ss_rus.command_buffer()
-    display_list.begin_display_list() # Begin command sequence
-    # display_list.remove_all() # Remove all objects that were created remotely
-    # display_list.create_text() # Create text object, server will return its id
-    # display_list.set_target_mode(hl2ss_rus.TargetMode.UseLast) # Set server to use the last created object as target, this avoids waiting for the id of the text object
-    display_list.set_target_mode(hl2ss_rus.TargetMode.UseID) # Restore target mode
-    display_list.set_text(key, font_size, rgba, text) # Set text
-    display_list.set_local_transform(key, position, rotation, scale) # Set the local transform
-    # display_list.set_active(key, hl2ss_rus.ActiveState.Active) # Make the text object visible
-    # display_list.set_target_mode(hl2ss_rus.TargetMode.UseID) # Restore target mode
-    display_list.end_display_list() # End command sequence
-    ipc.push(display_list) # Send commands to server
-    results = ipc.pull(display_list) # Get results from server
-    # key = results[2] # Get the text object id, created by the 3rd command in the list
-
-    print(f'Changed text object "{text}" with id {key}')
-    return key
-
-def create_background(position=None):
-    '''Initialize a background quad'''
-    if position:
-        bg_position = position
-    else:
-        bg_position = [0, 0, 0.55]
-    bg_rotation = [0, 0, 0, 1]
-    bg_scale = [0.2, 0.15, 0.01]
-    bg_rgba = [0.1, 0.1, 0.8, 1]
-
-    bg_key = 0
-
-    display_list = hl2ss_rus.command_buffer()
-    display_list.begin_display_list() # Begin command sequence
-    display_list.create_primitive(hl2ss_rus.PrimitiveType.Cube) # Create a quad, server will return its id
-    display_list.set_target_mode(hl2ss_rus.TargetMode.UseLast) # Set server to use the last created object as target, this avoids waiting for the id of the quad
-    display_list.set_local_transform(bg_key, bg_position, bg_rotation, bg_scale) # Set the local transform of the cube
-    display_list.set_color(bg_key, bg_rgba) # Set the color of the cube
-    display_list.set_active(bg_key, hl2ss_rus.ActiveState.Active) # Make the quad visible
-    display_list.set_target_mode(hl2ss_rus.TargetMode.UseID) # Restore target mode
-    display_list.end_display_list() # End command sequence
-    ipc.push(display_list) # Send commands to server
-    results = ipc.pull(display_list) # Get results from server
-    # print(results)
-    bg_key = results[1]  
-
-    return bg_key
-
 # Read the sequence file
 with open('assets/cpt_sequence.json', 'r') as f:
     sequence = json.load(f)
@@ -137,35 +71,42 @@ stimulus_duration = metadata.get('config', {}).get(
 
 print(f'Stimulus duration: {stimulus_duration} seconds')
 
-# Create the text objects
-# key = create_text(key, font_size, rgba, text, position, rotation, scale)
-# time.sleep(2)
+#------------------------------------------------------------------------------
 
-# text = '5'
-# print('Changing text...')
-# key = create_text(key, font_size, rgba, text, position, rotation, scale)
+# Create starting text object
+text_key = create_element_text(ipc, key,
+                font_size=0.4, text='Welcome to experiment!\nStart in 5 seconds...',
+                position=[0, 0, 0.5], rotation=[0, 0, 0, 1], scale=[1, 1, 1],
+                rgba=[1, 1, 1, 1])
+print(f'Text object created with id {text_key}')
 
+# Countdown
+for i in range(6):
+    seconds_left = 5 - i
+    text = str(f"Welcome to experiment!\nStart in {seconds_left} seconds...")
+    update_text(ipc, text_key,
+                font_size=0.4, text=text,
+                position=[0, 0, 0.5], rotation=[0, 0, 0, 1], scale=[1, 1, 1],
+                rgba=[1, 1, 1, 1])
+    time.sleep(1)
 
-text_key = init_text(key)
+update_text(ipc, text_key,
+                font_size=0.4, text="Starting now!",
+                position=[0, 0, 0.5], rotation=[0, 0, 0, 1], scale=[1, 1, 1],
+                rgba=[1, 1, 1, 1])
 
-time.sleep(5)
+time.sleep(0.5)
 
 # Adjust the text position for the sequence
 position = [0.08, -0.08, 0.5]
 bg_position = [position[0], position[1], position[2]+0.01]
 print(f"Background position: {bg_position}")
 
-bg_key = create_background(bg_position)
+bg_key = create_element_quad(ipc, key,
+                   position=bg_position, rotation=[0, 0, 0, 1], scale=[0.2, 0.15, 0.01],
+                   rgba=[1, 1, 1, 1])
+                #    rgba=[0.1, 0.1, 0.8, 1])
 print(f'Background created with id {bg_key}')
-
-
-def start_interaction():
-    '''Start the interaction sequence'''
-    print("Starting interaction...")
-    text = "开始实验"
-    key = update_text(text_key, font_size, rgba, text, position, rotation, scale)
-    time.sleep(2)
-
     
 # Start the sequence
 try:
@@ -174,7 +115,12 @@ try:
         print(f"第{i+1:2d}个刺激: {digit} {target_str}")
 
         text = str(digit)
-        key = update_text(text_key, font_size, rgba, text, position, rotation, scale)
+        # key = update_text(text_key, font_size, rgba, text, position, rotation, scale)
+        update_text(ipc, text_key,
+                font_size=0.4, text=text,
+                position=position, rotation=[0, 0, 0, 1], scale=[2, 2, 1],
+                rgba=[0.1, 0.1, 0.8, 1])
+                # rgba=[1, 1, 1, 1])
         time.sleep(stimulus_duration)
         interval_duration = interval / 1000.0
         time.sleep(interval_duration)
@@ -188,12 +134,10 @@ print("\n播放完成")
 # Stop and clean up
 stop_event.wait()
 
-command_buffer = hl2ss_rus.command_buffer()
-command_buffer.remove(key) # Destroy text object
-command_buffer.remove(bg_key) # Destroy background quad
-# command_buffer.remove_all() # Remove all objects that were created remotely
-ipc.push(command_buffer)
-results = ipc.pull(command_buffer)
+results = destroy_element(ipc, text_key)
+results = destroy_element(ipc, bg_key)
+print(f'Text object with id {text_key} destroyed')
+print(f'Background object with id {bg_key} destroyed')
 
 ipc.close()
 

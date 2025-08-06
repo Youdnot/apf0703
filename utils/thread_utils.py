@@ -2,7 +2,6 @@ import time
 import copy
 from multiprocessing import Process, Queue, Lock, Manager, Condition, Event
 from queue import Empty, Full
-from pynput import keyboard
 
 # stack
 class BoundedStack:
@@ -68,7 +67,10 @@ class BoundedStack:
     def full(self):
         with self._mutex:
             return self.maxsize > 0 and len(self._stack) >= self.maxsize
-    
+
+#------------------------------------------------------------------------------
+
+from pynput import keyboard
 
 # stop event
 stop_event = Event()
@@ -78,6 +80,9 @@ def on_press(key):
         stop_event.set()
         return False
     return True
+
+
+#------------------------------------------------------------------------------
 
 # producer for RGB frame
 frame_queue = BoundedStack(maxsize=2)
