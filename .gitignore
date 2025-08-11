@@ -1,6 +1,7 @@
 assets/*
 external/*
 outputs/*
+calibration/*
 
 # Python-generated files
 __pycache__/
