@@ -7,7 +7,7 @@
 
 import numpy as np
 
-from core.rgbd_stream import *
+from core.rgbd_stream_class import *
 
 # Settings --------------------------------------------------------------------
 
