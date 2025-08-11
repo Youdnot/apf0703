@@ -7,7 +7,7 @@
 
 import numpy as np
 
-from core.longthrow_stream import *
+from core.rgbd_stream import *
 
 # Settings --------------------------------------------------------------------
 
@@ -40,7 +40,7 @@ if __name__ == '__main__':
     calibration_lt = hl2ss_3dcv.get_calibration_rm(calibration_path, host, hl2ss.StreamPort.RM_DEPTH_LONGTHROW)
 
     uv2xy = calibration_lt.uv2xy
-    xy1, scale = hl2ss_3dcv.rm_depth_compute_rays(uv2xy, calibration_lt.scale)
+    xy1, scale = hl2ss_3dcv.rm_depth_compute_rays(uv2xy, calibration_lt.scale)  # scale = 1000
 
     xy1_o = xy1[:-1, :-1, :]
     xy1_d = xy1[1:, 1:, :]
@@ -138,6 +138,7 @@ if __name__ == '__main__':
         # Display RGBD pair ---------------------------------------------------
         cv2.imshow('RGB', color)
         cv2.imshow('Depth', hl2ss_3dcv.rm_depth_colormap(pv_z, max_depth))
+        print(f'pv_z min: {np.min(pv_z)}, max: {np.max(pv_z)}')
 
         # FPS -----------------------------------------------------------------
         # ~5 FPS for 1920x1080

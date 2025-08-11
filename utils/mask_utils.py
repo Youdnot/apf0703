@@ -36,6 +36,10 @@ def get_merged_bool_mask(mask_dict: MaskDictionaryModel) -> np.ndarray:
         if mask.shape != target_shape:
             print(f"[Warning] Mask shape mismatch: expected {target_shape}, got {mask.shape}")
             continue
+
+        # 筛选小面积mask
+        if torch.sum(mask) < 8000:
+            continue
         
         valid_masks.append(mask)
     
