@@ -284,11 +284,6 @@ def test_consumer(stack: BoundedStack, sentinel: Optional[object] = None) -> Non
 # -----------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    # Use spawn for cross-platform consistency and safer resource handling
-    try:
-        set_start_method("spawn")
-    except RuntimeError:
-        pass
 
     # Configuration: prefer environment variables if provided
     cfg = RGBDConfig(
