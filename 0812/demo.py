@@ -162,6 +162,9 @@ class FrameProducer:
         self.sink_lt.open()
 
     def _process_frames(self, data_pv, data_lt):
+        timestamp = data_lt.timestamp
+        pose = data_lt.pose
+
         # Preprocess frames
         depth = data_lt.payload.depth
         z = hl2ss_3dcv.rm_depth_normalize(depth, self.scale)
@@ -201,7 +204,7 @@ class FrameProducer:
                 continue
             pv_z[v0:v1, u0:u1] = pv_list[n, 4]
         
-        return color, pv_z
+        return color, pv_z, timestamp, pose
     
     def get_rgbd_frame(self):
         """
@@ -210,20 +213,20 @@ class FrameProducer:
         """
         _, data_lt = self.sink_lt.get_most_recent_frame()
         if (data_lt is None) or (not hl2ss.is_valid_pose(data_lt.pose)):
-            return None, None
+            return None, None, None, None
 
         _, data_pv = self.sink_pv.get_nearest(data_lt.timestamp)
         if (data_pv is None) or (not hl2ss.is_valid_pose(data_pv.pose)):
-            return None, None
+            return None, None, None, None
     
         return self._process_frames(data_pv, data_lt)
     
     def run(self):
         while True:
-            rgb, pv_z = self.get_rgbd_frame()
+            rgb, pv_z, timestamp, pose = self.get_rgbd_frame()
             if rgb is None or pv_z is None:
                 continue
-            self.stack.push((rgb, pv_z))
+            self.stack.push((rgb, pv_z, timestamp, pose))
             # time.sleep(0.01)
 
     def close(self):
@@ -267,8 +270,9 @@ if __name__ == "__main__":
     p.start()
 
     while True:
-        rgb, pv_z = frame_stack.peek()
-        # print(f"timestamp: {timestamp}, pose: {pose}")
+        rgb, pv_z, timestamp, pose = frame_stack.peek()
+        print(f"timestamp: {timestamp}\npose: {pose}")
+
         cv2.imshow('RGB', rgb)
         cv2.imshow('Depth', hl2ss_3dcv.rm_depth_colormap(pv_z, max_depth))
         cv2.waitKey(1)
