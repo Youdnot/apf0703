@@ -157,6 +157,9 @@ while True:
     print(f"[Frame {frame_idx}] Processing live frame...")
     process_image = tracker.add_image(pv_frame)
 
+    import external.hl2ss.hl2ss_3dcv as hl2ss_3dcv
+    cv2.imshow("PV Depth", hl2ss_3dcv.rm_depth_colormap(pv_z, max_depth))
+
     if process_image is None or not isinstance(process_image, np.ndarray):
         print(f"[Warning] Skipped frame {frame_idx} due to empty result.")
         frame_idx += 1
@@ -166,7 +169,7 @@ while True:
     current_mask_dict = tracker.last_mask_dict
     
     # 合并所有mask为bool数组
-    merged_bool_mask = get_merged_bool_mask(current_mask_dict)
+    merged_bool_mask = get_merged_bool_mask_new(current_mask_dict, pv_z)
     print(f"merged_bool_mask: {merged_bool_mask.shape}")
     # 将布尔掩码转换为uint8格式用于显示
     merged_mask_display = (merged_bool_mask * 255).astype(np.uint8)
