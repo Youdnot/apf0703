@@ -254,7 +254,8 @@ if __name__ == "__main__":
     pv_fps = 15
 
     # Maximum depth in meters
-    max_depth = 1
+    # Depth camera range is 0.25m to 7.5m, here the max_depth is for vis effect
+    max_depth = 3
 
     frame_producer = FrameProducer(
         stack=frame_stack,
@@ -277,3 +278,4 @@ if __name__ == "__main__":
         cv2.imshow('Depth', hl2ss_3dcv.rm_depth_colormap(pv_z, max_depth))
         cv2.waitKey(1)
 
+    p,join()
