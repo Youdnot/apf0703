@@ -1,3 +1,8 @@
+import os
+# Set mirror for huggingface
+# Don't seem to work
+os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+
 from core.detection import *
 from utils.mask_utils import *
 from config import config_manager
@@ -12,10 +17,6 @@ detection_interval = detection_config.detection_interval
 # max_frames = 300  # Maximum number of frames to process (prevents infinite loop)
 
 os.makedirs(output_dir, exist_ok=True)
-
-# Set mirror for huggingface
-# Don't seem to work
-# os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 
 # Initialize the object tracker
 tracker = IncrementalObjectTracker(
