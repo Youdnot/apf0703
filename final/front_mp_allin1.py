@@ -1,7 +1,7 @@
 import rerun as rr
 import numpy as np
-import open3d as o3d
-import multiprocessing
+import numba as nb
+# import open3d as o3d
 from multiprocessing import Process, Queue
 
 import hl2ss
@@ -10,7 +10,7 @@ import hl2ss_mp
 import hl2ss_3dcv
 import hl2ss_utilities
 
-from data_utils import *
+# from data_utils import *
 
 class FrontEnd:
     """Simple producer using an instance method as the Process target.
@@ -99,6 +99,184 @@ class FrontEnd:
         self.vi_counter = hl2ss_utilities.framerate_counter()
         self.vi_counter.reset()
 
+    def _convert_qpc_to_datetime64(self, qpc_timestamp, utc_offset):
+        """
+        Convert a QPC timestamp to numpy.datetime64 format.
+        
+        Args:
+            qpc_timestamp: QPC domain timestamp (in 100-nanosecond units).
+            utc_offset: UTC offset (in 100-nanosecond units).
+        
+        Returns:
+            numpy.datetime64: Converted timestamp with nanosecond precision.
+        """
+        # Convert QPC to Windows FILETIME (UTC)
+        filetime = hl2ss.ts_qpc_to_filetime(qpc_timestamp, utc_offset)
+        
+        # Convert FILETIME to Unix time (in 100-nanoseconds)
+        unix_hns = hl2ss.ts_filetime_to_unix_hns(filetime)
+        
+        # Convert to numpy.datetime64 with nanosecond precision
+        # Convert 100-nanoseconds to nanosecondsimport open3d as o3d
+        unix_ns = unix_hns * 100
+        
+        # Create numpy.datetime64 object
+        datetime_obj = np.datetime64(unix_ns, 'ns')
+
+        # Downsample
+        datetime_obj = datetime_obj.astype('datetime64[ms]')
+        return datetime_obj
+
+    #------------------------------------------------------------------------------
+    # Optimization functions
+    # optimized depth to pv rgb
+    @nb.jit(nopython=True, cache=True)
+    def _numba_zero_order_hold(self, pv_list, pv_height, pv_width):
+        """使用numba优化的零阶保持实现"""
+        pv_z = np.zeros((pv_height, pv_width), dtype=np.float32)
+        
+        for n in range(pv_list.shape[0]):
+            u0 = max(0, min(int(pv_list[n, 0]), pv_width-1))
+            v0 = max(0, min(int(pv_list[n, 1]), pv_height-1))
+            u1 = max(0, min(int(pv_list[n, 2]), pv_width))
+            v1 = max(0, min(int(pv_list[n, 3]), pv_height))
+            depth = pv_list[n, 4]
+            
+            if depth > 0 and u1 > u0 and v1 > v0:
+                for v in range(v0, v1):
+                    for u in range(u0, u1):
+                        pv_z[v, u] = depth
+        
+        return pv_z
+
+    # optimize eet projection
+    def _optimized_mesh_generation(self, depth, world_points):
+        """
+        Optimized mesh generation using numpy vectorization instead of nested for loops.
+        
+        Args:
+            depth: depth image array
+            world_points: 3D world coordinates for each depth pixel
+        
+        Returns:
+            faces: list of triangle face indices
+        """
+        h, w = depth.shape[-2:]
+        mask = depth > 0
+        
+        # Create coordinate grids using numpy
+        i_coords, j_coords = np.meshgrid(np.arange(1, h), np.arange(1, w), indexing='ij')
+        
+        # Flatten coordinates for vectorized operations
+        i_flat = i_coords.flatten()
+        j_flat = j_coords.flatten()
+        
+        # Calculate all corner coordinates at once
+        ul_i = (i_flat - 1) * w + (j_flat - 1)  # upper-left
+        ur_i = (i_flat - 1) * w + j_flat        # upper-right  
+        bl_i = i_flat * w + (j_flat - 1)        # bottom-left
+        br_i = i_flat * w + j_flat              # bottom-right
+        
+        # Get validity masks for all corners
+        ul_valid = mask[i_flat - 1, j_flat - 1]
+        ur_valid = mask[i_flat - 1, j_flat]
+        bl_valid = mask[i_flat, j_flat - 1]
+        br_valid = mask[i_flat, j_flat]
+        
+        # Create triangles using vectorized conditions
+        faces = []
+        
+        # Triangle 1: bottom-left, bottom-right, upper-right
+        triangle1_mask = bl_valid & br_valid & ur_valid
+        triangle1_indices = np.column_stack((bl_i[triangle1_mask], 
+                                            br_i[triangle1_mask], 
+                                            ur_i[triangle1_mask]))
+        
+        # Triangle 2: upper-right, upper-left, bottom-left  
+        triangle2_mask = ur_valid & ul_valid & bl_valid
+        triangle2_indices = np.column_stack((ur_i[triangle2_mask], 
+                                            ul_i[triangle2_mask], 
+                                            bl_i[triangle2_mask]))
+        
+        # Combine all triangles
+        if len(triangle1_indices) > 0:
+            faces.extend(triangle1_indices.tolist())
+        if len(triangle2_indices) > 0:
+            faces.extend(triangle2_indices.tolist())
+        
+        return faces
+
+    def _create_raycast_scene_optimized(self, depth, world_points):
+        """
+        Create raycast scene with optimized mesh generation.
+        """
+        faces = self._optimized_mesh_generation(depth, world_points)
+
+        vertices = o3d.core.Tensor(np.asarray(world_points.reshape(-1, 3), dtype=np.float32))
+        triangles = o3d.core.Tensor(np.asarray(faces, dtype=np.int32))
+
+        mesh = o3d.t.geometry.TriangleMesh(vertices, triangles)
+        rcs = o3d.t.geometry.RaycastingScene()
+        rcs.add_triangles(mesh)
+
+        return rcs
+
+
+    # 使用 numba JIT 编译优化关键计算
+    @nb.jit(nopython=True, cache=True)
+    def _fast_transform_and_project(self, xy1_o, xy1_d, z, lt_to_world, world_to_pv, pv_to_pv_image):
+        """使用 numba 加速的变换和投影操作"""
+        # 提取有效深度区域
+        z_crop = z[:-1, :-1, :]
+        
+        # 计算点云
+        lt_points_o = xy1_o * z_crop
+        lt_points_d = xy1_d * z_crop
+        
+        # 变换到世界坐标系
+        world_points_o = self._transform_points_nb(lt_points_o, lt_to_world)
+        world_points_d = self._transform_points_nb(lt_points_d, lt_to_world)
+        
+        # 变换到PV坐标系并投影
+        pv_points_o = self._transform_points_nb(world_points_o, world_to_pv)
+        pv_depth = pv_points_o[:, :, 2:3]
+        
+        pv_uv_o = self._project_points_nb(pv_points_o, pv_to_pv_image)
+        pv_uv_d = self._project_points_nb(world_points_d, world_to_pv @ pv_to_pv_image)
+        
+        return pv_uv_o, pv_uv_d, pv_depth
+
+    @nb.jit(nopython=True, cache=True)
+    def _transform_points_nb(self, points, transform_matrix):
+        """numba 优化的点变换"""
+        h, w, _ = points.shape
+        result = np.zeros_like(points)
+        
+        for i in range(h):
+            for j in range(w):
+                point = points[i, j]
+                # 齐次坐标变换
+                result[i, j, 0] = transform_matrix[0, 0] * point[0] + transform_matrix[0, 1] * point[1] + transform_matrix[0, 2] * point[2] + transform_matrix[0, 3]
+                result[i, j, 1] = transform_matrix[1, 0] * point[0] + transform_matrix[1, 1] * point[1] + transform_matrix[1, 2] * point[2] + transform_matrix[1, 3]
+                result[i, j, 2] = transform_matrix[2, 0] * point[0] + transform_matrix[2, 1] * point[1] + transform_matrix[2, 2] * point[2] + transform_matrix[2, 3]
+        
+        return result
+
+    @nb.jit(nopython=True, cache=True)
+    def _project_points_nb(self, points_3d, projection_matrix):
+        """numba 优化的点投影"""
+        h, w, _ = points_3d.shape
+        result = np.zeros((h, w, 2), dtype=np.float32)
+        
+        for i in range(h):
+            for j in range(w):
+                point = points_3d[i, j]
+                if point[2] > 0:  # 避免除零
+                    result[i, j, 0] = projection_matrix[0, 0] * point[0] / point[2] + projection_matrix[0, 2]
+                    result[i, j, 1] = projection_matrix[1, 1] * point[1] / point[2] + projection_matrix[1, 2]
+        
+        return result
+
     def get_data(self):
         """Get synchronized PV, depth, and EET data."""
         # Get PV frame and nearest (in time) RM Depth Long Throw frame
@@ -130,7 +308,7 @@ class FrontEnd:
         world_to_pv    = hl2ss_3dcv.world_to_reference(data_pv.pose) @ hl2ss_3dcv.rignode_to_camera(self.color_extrinsics)
         pv_to_pv_image = hl2ss_3dcv.camera_to_image(self.color_intrinsics)
 
-        pv_uv_o, pv_uv_d, pv_depth = fast_transform_and_project(
+        pv_uv_o, pv_uv_d, pv_depth = self._fast_transform_and_project(
             self.xy1_o, self.xy1_d, z, lt_to_world, world_to_pv, pv_to_pv_image
         )
 
@@ -142,7 +320,7 @@ class FrontEnd:
 
         pv_list = np.hstack((np.floor(pv_list_o[mask, :]), np.floor(pv_list_d[mask, :]) + 1, pv_list_depth[mask]))
 
-        pv_z = numba_zero_order_hold(pv_list, self.pv_height, self.pv_width)
+        pv_z = self._numba_zero_order_hold(pv_list, self.pv_height, self.pv_width)
 
         return pv_z
         
@@ -161,7 +339,7 @@ class FrontEnd:
             points       = hl2ss_3dcv.rm_depth_to_points(self.xy1, hl2ss_3dcv.rm_depth_normalize(depth, self.scale))
             world_points = hl2ss_3dcv.transform(points, lt_to_world)
             
-            rcs = create_raycast_scene_optimized(depth, world_points)
+            rcs = self._create_raycast_scene_optimized(depth, world_points)
 
         color = data_pv.payload.image
         eet = data_eet.payload
@@ -180,7 +358,7 @@ class FrontEnd:
     
     def log_data(self, data_pv, data_lt, pv_z, combined_point, combined_image_point, combined_ray, d):
         qpc_timestamp = data_pv.timestamp
-        pv_timestamp = convert_qpc_to_datetime64(qpc_timestamp, self.utc_offset)
+        pv_timestamp = self._convert_qpc_to_datetime64(qpc_timestamp, self.utc_offset)
         rr.set_time("time", timestamp=pv_timestamp)
         rr.set_time("frame", timestamp=self.frame_idx)
 
@@ -237,37 +415,6 @@ class FrontEnd:
                            translation=data_pv.pose[3, 0:3],
                            mat3x3=np.linalg.inv(data_pv.pose[0:3, 0:3]),
                        ))
-        
-        def log_data_test(self, data_pv, data_lt, pv_z):
-            qpc_timestamp = data_pv.timestamp
-            pv_timestamp = convert_qpc_to_datetime64(qpc_timestamp, self.utc_offset)
-            rr.set_time("time", timestamp=pv_timestamp)
-            rr.set_time("frame", timestamp=self.frame_idx)
-
-            rr.log("/world/camera/image", rr.Image(image=data_pv.payload.image, color_model="bgr").compress(jpeg_quality=10))
-            rr.log("/world/sensor/depth", rr.DepthImage(data_lt.payload.depth, meter=1.0, colormap="viridis"))
-
-            # aligned_depth = pv_z.astype(np.uint16)
-            # rr.log("/world/camera/aligned_depth", rr.DepthImage(aligned_depth))
-
-            # Create pinhole camera with proper image coordinate system
-            # Rerun expects Y-down image coordinates, which matches OpenCV convention
-            rr.log("/world/camera", 
-                    rr.Pinhole(
-                        focal_length=data_pv.payload.focal_length,
-                        principal_point=data_pv.payload.principal_point,
-                        resolution=(self.pv_width, self.pv_height),
-                        image_plane_distance=2.0,
-                        camera_xyz=rr.ViewCoordinates.RUB
-                    ))
-            
-            # Log camera pose
-            # HoloLens pose is camera-to-world, but rerun expects world-to-camera
-            rr.log("/world/camera", 
-                        rr.Transform3D(
-                            translation=data_pv.pose[3, 0:3],
-                            mat3x3=np.linalg.inv(data_pv.pose[0:3, 0:3]),
-                        ))
 
     def run(self):
         """Main processing loop that continuously captures and processes data."""
@@ -290,9 +437,8 @@ class FrontEnd:
                 print(f"Removed old data at {old_data[-1]}")
             self.queue.put((data_pv.payload.image, pv_z, data_pv.timestamp))
 
-            # d, combined_ray, combined_point, combined_image_point = self.eet_projection(data_pv, data_lt, data_eet)
-            # self.log_data(data_pv, data_lt, pv_z, combined_point, combined_image_point, combined_ray, d)
-            # self.log_data_test(data_pv, data_lt, pv_z)
+            d, combined_ray, combined_point, combined_image_point = self.eet_projection(data_pv, data_lt, data_eet)
+            self.log_data(data_pv, data_lt, pv_z, combined_point, combined_image_point, combined_ray, d)
 
             # FPS -----------------------------------------------------------------
             # ~5 FPS for 1920x1080
@@ -322,8 +468,6 @@ if __name__ == "__main__":
     rr.spawn()
     rr.log("/world", rr.ViewCoordinates.RUB, static=True)
 
-    import cv2
-
     frame_queue = Queue()
 
     frontend = FrontEnd(queue=frame_queue)
@@ -337,9 +481,6 @@ if __name__ == "__main__":
         try:
             color, pv_z, timestamp = frontend.queue.get()
             print(f"Received data - timestamp: {timestamp}")
-            cv2.imshow("Image", color)
-            cv2.imshow("PV_Z", pv_z)
-            cv2.waitKey(1)
         
         except KeyboardInterrupt:
             print("Interrupted by user")
