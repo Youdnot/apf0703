@@ -1,7 +1,6 @@
 import rerun as rr
 import numpy as np
-import open3d as o3d
-import multiprocessing
+# import open3d as o3d
 from multiprocessing import Process, Queue
 
 import hl2ss
@@ -87,7 +86,7 @@ class FrontEnd:
         self.pv_extrinsics = np.eye(4, 4, dtype=np.float32)
 
         # Start PV and RM Depth Long Throw streams
-        self.sink_pv = hl2ss_mp.stream(hl2ss_lnm.rx_pv(self.host, hl2ss.StreamPort.PERSONAL_VIDEO, width=self.pv_width, height=self.pv_height, framerate=self.pv_fps))
+        self.sink_pv = hl2ss_mp.stream(hl2ss_lnm.rx_pv(self.host, hl2ss.StreamPort.PERSONAL_VIDEO, width=self.pv_width, height=self.pv_height, framerate=self.pv_fps, decoded_format='bgr24'))
         self.sink_lt = hl2ss_mp.stream(hl2ss_lnm.rx_rm_depth_longthrow(self.host, hl2ss.StreamPort.RM_DEPTH_LONGTHROW))
         self.sink_eet = hl2ss_mp.stream(hl2ss_lnm.rx_eet(self.host, hl2ss.StreamPort.EXTENDED_EYE_TRACKER, fps=self.eet_fps))
         
@@ -285,8 +284,6 @@ class FrontEnd:
 
 # Example usage (similar to demo.py main function)
 if __name__ == "__main__":
-    multiprocessing.set_start_method("spawn", force=True)
-
     # Initialize rerun
     rr.init("Unified")
     rr.spawn()

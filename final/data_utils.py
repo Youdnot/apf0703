@@ -1,103 +1,103 @@
-import time
-from multiprocessing import Process, Lock, Condition, Manager, Event, set_start_method, current_process
-from typing import Optional
+# import time
+# from multiprocessing import Process, Lock, Condition, Manager, Event, set_start_method, current_process
+# from typing import Optional
 
-class BoundedStack:
-    """A simple process-safe bounded LIFO stack using a Manager-backed list.
+# class BoundedStack:
+#     """A simple process-safe bounded LIFO stack using a Manager-backed list.
 
-    This container favors most-recent data. When full, it discards the oldest
-    element (bottom of stack) to keep latency low. It supports blocking pop/peek
-    semantics with an optional timeout.
+#     This container favors most-recent data. When full, it discards the oldest
+#     element (bottom of stack) to keep latency low. It supports blocking pop/peek
+#     semantics with an optional timeout.
 
-    Attributes:
-        maxsize: Maximum number of elements to keep. If <= 0, behaves as unbounded.
-    """
+#     Attributes:
+#         maxsize: Maximum number of elements to keep. If <= 0, behaves as unbounded.
+#     """
 
-    def __init__(self, maxsize: int = 2) -> None:
-        self.maxsize = maxsize
-        self._manager = Manager()
-        self._stack = self._manager.list()  # type: ignore[var-annotated]
-        self._mutex = Lock()
-        self._not_empty = Condition(self._mutex)
+#     def __init__(self, maxsize: int = 2) -> None:
+#         self.maxsize = maxsize
+#         self._manager = Manager()
+#         self._stack = self._manager.list()  # type: ignore[var-annotated]
+#         self._mutex = Lock()
+#         self._not_empty = Condition(self._mutex)
 
-    def push(self, item) -> None:
-        """Pushes an item onto the top of the stack, dropping oldest if full.
+#     def push(self, item) -> None:
+#         """Pushes an item onto the top of the stack, dropping oldest if full.
 
-        Args:
-            item: Any picklable Python object (e.g., numpy arrays, small dicts).
-        """
-        with self._mutex:
-            if self.maxsize > 0 and len(self._stack) >= self.maxsize:
-                # Remove the oldest element to prioritize recency and reduce latency.
-                self._stack.pop(0)
-            self._stack.append(item)
-            self._not_empty.notify()
+#         Args:
+#             item: Any picklable Python object (e.g., numpy arrays, small dicts).
+#         """
+#         with self._mutex:
+#             if self.maxsize > 0 and len(self._stack) >= self.maxsize:
+#                 # Remove the oldest element to prioritize recency and reduce latency.
+#                 self._stack.pop(0)
+#             self._stack.append(item)
+#             self._not_empty.notify()
 
-    def pop(self, block: bool = True, timeout: Optional[float] = None):
-        """Pops the most recent item from the stack.
+#     def pop(self, block: bool = True, timeout: Optional[float] = None):
+#         """Pops the most recent item from the stack.
 
-        Args:
-            block: If True, block until an item is available or timeout occurs.
-            timeout: Maximum time to wait in seconds if blocking. None means wait indefinitely.
+#         Args:
+#             block: If True, block until an item is available or timeout occurs.
+#             timeout: Maximum time to wait in seconds if blocking. None means wait indefinitely.
 
-        Returns:
-            The most recent item.
+#         Returns:
+#             The most recent item.
 
-        Raises:
-            TimeoutError: If blocking with a timeout and no item becomes available.
-            RuntimeError: If non-blocking and the stack is empty.
-        """
-        with self._mutex:
-            if not block:
-                if len(self._stack) == 0:
-                    raise RuntimeError("pop from empty stack (non-blocking)")
-            elif timeout is None:
-                while len(self._stack) == 0:
-                    self._not_empty.wait()
-            else:
-                end_time = time.time() + timeout
-                while len(self._stack) == 0:
-                    remaining = end_time - time.time()
-                    if remaining <= 0:
-                        raise TimeoutError("pop timed out waiting for item")
-                    self._not_empty.wait(remaining)
+#         Raises:
+#             TimeoutError: If blocking with a timeout and no item becomes available.
+#             RuntimeError: If non-blocking and the stack is empty.
+#         """
+#         with self._mutex:
+#             if not block:
+#                 if len(self._stack) == 0:
+#                     raise RuntimeError("pop from empty stack (non-blocking)")
+#             elif timeout is None:
+#                 while len(self._stack) == 0:
+#                     self._not_empty.wait()
+#             else:
+#                 end_time = time.time() + timeout
+#                 while len(self._stack) == 0:
+#                     remaining = end_time - time.time()
+#                     if remaining <= 0:
+#                         raise TimeoutError("pop timed out waiting for item")
+#                     self._not_empty.wait(remaining)
 
-            return self._stack.pop()
+#             return self._stack.pop()
 
-    def peek(self, block: bool = True, timeout: Optional[float] = None):
-        """Returns the most recent item without removing it.
+#     def peek(self, block: bool = True, timeout: Optional[float] = None):
+#         """Returns the most recent item without removing it.
 
-        Args:
-            block: If True, block until an item is available or timeout occurs.
-            timeout: Maximum time to wait in seconds if blocking. None means wait indefinitely.
+#         Args:
+#             block: If True, block until an item is available or timeout occurs.
+#             timeout: Maximum time to wait in seconds if blocking. None means wait indefinitely.
 
-        Returns:
-            The most recent item.
+#         Returns:
+#             The most recent item.
 
-        Raises:
-            TimeoutError: If blocking with a timeout and no item becomes available.
-            RuntimeError: If non-blocking and the stack is empty.
-        """
-        with self._mutex:
-            if not block:
-                if len(self._stack) == 0:
-                    raise RuntimeError("peek from empty stack (non-blocking)")
-            elif timeout is None:
-                while len(self._stack) == 0:
-                    self._not_empty.wait()
-            else:
-                end_time = time.time() + timeout
-                while len(self._stack) == 0:
-                    remaining = end_time - time.time()
-                    if remaining <= 0:
-                        raise TimeoutError("peek timed out waiting for item")
-                    self._not_empty.wait(remaining)
+#         Raises:
+#             TimeoutError: If blocking with a timeout and no item becomes available.
+#             RuntimeError: If non-blocking and the stack is empty.
+#         """
+#         with self._mutex:
+#             if not block:
+#                 if len(self._stack) == 0:
+#                     raise RuntimeError("peek from empty stack (non-blocking)")
+#             elif timeout is None:
+#                 while len(self._stack) == 0:
+#                     self._not_empty.wait()
+#             else:
+#                 end_time = time.time() + timeout
+#                 while len(self._stack) == 0:
+#                     remaining = end_time - time.time()
+#                     if remaining <= 0:
+#                         raise TimeoutError("peek timed out waiting for item")
+#                     self._not_empty.wait(remaining)
 
-            return self._stack[-1]
+#             return self._stack[-1]
 
-    def empty(self) -> bool:
-        with self._mutex:
-            return len(self._stack) == 0
+#     def empty(self) -> bool:
+#         with self._mutex:
+#             return len(self._stack) == 0
 
 #------------------------------------------------------------------------------
 import numpy as np
