@@ -331,9 +331,9 @@ if __name__ == "__main__":
         try:
             color, pv_z, timestamp = frontend.queue.get()
             # print(f"Received data - timestamp: {timestamp}")
-            cv2.imshow("Image", color)
-            cv2.imshow('Depth', hl2ss_3dcv.rm_depth_colormap(pv_z, max_depth=3.0))
-            cv2.waitKey(1)
+            # cv2.imshow("Image", color)
+            # cv2.imshow('Depth', hl2ss_3dcv.rm_depth_colormap(pv_z, max_depth=3.0))
+            # cv2.waitKey(1)
         
         except KeyboardInterrupt:
             print("Interrupted by user")

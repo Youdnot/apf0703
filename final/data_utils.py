@@ -212,7 +212,6 @@ def optimized_mesh_generation(depth):
     Returns:
         faces: list of triangle face indices
     """
-    print("optimized_mesh_generation")
     h, w = depth.shape[-2:]
     mask = depth > 0
     
@@ -262,20 +261,13 @@ def create_raycast_scene_optimized(depth, world_points):
     """
     Create raycast scene with optimized mesh generation.
     """
-    print("create_raycast_scene_optimized")
     faces = optimized_mesh_generation(depth)
-    print("mesh done")
 
     vertices = o3d.core.Tensor(np.asarray(world_points.reshape(-1, 3), dtype=np.float32))
-    print("1")
     triangles = o3d.core.Tensor(np.asarray(faces, dtype=np.int32))
-    print("2")
     mesh = o3d.t.geometry.TriangleMesh(vertices, triangles)
-    print("3")
     rcs = o3d.t.geometry.RaycastingScene()
-    print("4")
     rcs.add_triangles(mesh)
-    print("5")
     return rcs
     
 
