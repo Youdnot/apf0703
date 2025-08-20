@@ -46,6 +46,31 @@ class BoundedStack:
     def full(self):
         with self._mutex:
             return self.maxsize > 0 and len(self._stack) >= self.maxsize
+        
+class LifoQueue:
+    def __init__(self, maxsize=10):
+        self.manager = Manager()
+        self.data = self.manager.list()
+        self.lock = Lock()
+        self.maxsize = maxsize
+
+    def put(self, item):
+        with self.lock:
+            if len(self.data) >= self.maxsize:
+                # 超过容量限制，移除最旧的元素（队底）
+                self.data.pop(0)
+            self.data.append(item)  # 新元素放到顶部
+
+    def get(self):
+        with self.lock:
+            if self.data:
+                return self.data.pop()  # 弹出顶部元素
+            else:
+                return None
+
+    def qsize(self):
+        with self.lock:
+            return len(self.data)
 
 # def producer(q):
 #     for i in range(10):
@@ -62,8 +87,23 @@ class BoundedStack:
 #         print(f"Consumed: {item}")
 #         time.sleep(1)
 
+# def producer(q):
+#     for i in range(20):
+#         q.put(i)
+#         print(f"Produced: {i}")
+#         time.sleep(0.2)
+#     q.put(None)
+
+# def consumer(q):
+#     while True:
+#         item = q.get()
+#         if item is None:
+#             break
+#         print(f"Consumed: {item}")
+#         time.sleep(1)
+
 # if __name__ == "__main__":
-#     q = BoundedStack()
+#     q = LifoQueue()
 #     p = Process(target=producer, args=(q,))
 #     c1 = Process(target=consumer, args=(q,))
 #     c2 = Process(target=consumer, args=(q,))

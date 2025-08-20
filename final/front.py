@@ -148,6 +148,7 @@ class FrontEnd:
         
 
     def eet_projection(self, data_pv, data_lt, data_eet):
+        world_to_pv_image = None
         if (hl2ss.is_valid_pose(data_pv.pose)):
             world_to_pv_image = hl2ss_3dcv.world_to_reference(data_pv.pose) @ hl2ss_3dcv.rignode_to_camera(self.color_extrinsics) @ hl2ss_3dcv.camera_to_image(self.color_intrinsics)
 
@@ -162,6 +163,9 @@ class FrontEnd:
             world_points = hl2ss_3dcv.transform(points, lt_to_world)
             
             rcs = create_raycast_scene_optimized(depth, world_points)
+
+        color = None
+        eet = None
 
         color = data_pv.payload.image
         eet = data_eet.payload
@@ -284,7 +288,8 @@ class FrontEnd:
     def run(self):
         """Main processing loop that continuously captures and processes data."""
         print("FrontEnd process started...")
-
+        
+        # Initialize streams in the worker process
         self.initialize_streams()
         
         while True:
@@ -347,9 +352,8 @@ if __name__ == "__main__":
     while True:
         try:
             color, pv_z, timestamp = frontend.queue.get()
-            print(f"Received data - timestamp: {timestamp}")
+            # print(f"Received data - timestamp: {timestamp}")
             cv2.imshow("Image", color)
-            cv2.imshow("PV_Z", pv_z)
             cv2.waitKey(1)
         
         except KeyboardInterrupt:

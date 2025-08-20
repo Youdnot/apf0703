@@ -138,7 +138,7 @@ def convert_qpc_to_datetime64(qpc_timestamp, utc_offset):
 #------------------------------------------------------------------------------
 # Optimization functions
 # optimized depth to pv rgb
-@nb.jit(nopython=True, cache=True)
+# @nb.jit(nopython=True, cache=True)
 def numba_zero_order_hold(pv_list, pv_height, pv_width):
     """使用numba优化的零阶保持实现"""
     pv_z = np.zeros((pv_height, pv_width), dtype=np.float32)
@@ -231,7 +231,7 @@ def create_raycast_scene_optimized(depth, world_points):
 
 
 # 使用 numba JIT 编译优化关键计算
-@nb.jit(nopython=True, cache=True)
+# @nb.jit(nopython=True, cache=True)
 def fast_transform_and_project(xy1_o, xy1_d, z, lt_to_world, world_to_pv, pv_to_pv_image):
     """使用 numba 加速的变换和投影操作"""
     # 提取有效深度区域
@@ -254,7 +254,7 @@ def fast_transform_and_project(xy1_o, xy1_d, z, lt_to_world, world_to_pv, pv_to_
     
     return pv_uv_o, pv_uv_d, pv_depth
 
-@nb.jit(nopython=True, cache=True)
+# @nb.jit(nopython=True, cache=True)
 def transform_points_nb(points, transform_matrix):
     """numba 优化的点变换"""
     h, w, _ = points.shape
@@ -270,7 +270,7 @@ def transform_points_nb(points, transform_matrix):
     
     return result
 
-@nb.jit(nopython=True, cache=True)
+# @nb.jit(nopython=True, cache=True)
 def project_points_nb(points_3d, projection_matrix):
     """numba 优化的点投影"""
     h, w, _ = points_3d.shape

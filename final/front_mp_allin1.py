@@ -356,9 +356,15 @@ class FrontEnd:
 
         return d, combined_ray, combined_point, combined_image_point
     
-    def log_data(self, data_pv, data_lt, pv_z, combined_point, combined_image_point, combined_ray, d):
+    @rr.shutdown_at_exit
+    def log_data(self, data_pv, data_lt, pv_z, combined_point, combined_image_point, combined_ray, d) -> None:
         qpc_timestamp = data_pv.timestamp
         pv_timestamp = self._convert_qpc_to_datetime64(qpc_timestamp, self.utc_offset)
+
+        rr.init("Unified")
+        rr.connect_grpc()
+
+        rr.log("/world", rr.ViewCoordinates.RUB, static=True)
         rr.set_time("time", timestamp=pv_timestamp)
         rr.set_time("frame", timestamp=self.frame_idx)
 
@@ -411,10 +417,10 @@ class FrontEnd:
         # Log camera pose
         # HoloLens pose is camera-to-world, but rerun expects world-to-camera
         rr.log("/world/camera", 
-                       rr.Transform3D(
-                           translation=data_pv.pose[3, 0:3],
-                           mat3x3=np.linalg.inv(data_pv.pose[0:3, 0:3]),
-                       ))
+                    rr.Transform3D(
+                        translation=data_pv.pose[3, 0:3],
+                        mat3x3=np.linalg.inv(data_pv.pose[0:3, 0:3]),
+                    ))
 
     def run(self):
         """Main processing loop that continuously captures and processes data."""
@@ -463,15 +469,17 @@ class FrontEnd:
 
 # Example usage (similar to demo.py main function)
 if __name__ == "__main__":
-    # Initialize rerun
-    rr.init("Unified")
-    rr.spawn()
-    rr.log("/world", rr.ViewCoordinates.RUB, static=True)
+    import cv2
 
     frame_queue = Queue()
 
     frontend = FrontEnd(queue=frame_queue)
-    # frontend.initialize_streams()
+
+    # Initialize rerun
+    rr.init("Unified")
+    rr.spawn(connect=False)  # this is the Viewer that each child process will connect to
+    # rr.log("/world", rr.ViewCoordinates.RUB, static=True)
+
 
     p = Process(target=frontend.run, name="FrontEndProcess")
     p.start()
@@ -481,6 +489,8 @@ if __name__ == "__main__":
         try:
             color, pv_z, timestamp = frontend.queue.get()
             print(f"Received data - timestamp: {timestamp}")
+            cv2.imshow("Image", color)
+            cv2.waitKey(1)
         
         except KeyboardInterrupt:
             print("Interrupted by user")
