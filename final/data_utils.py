@@ -137,6 +137,49 @@ def convert_qpc_to_datetime64(qpc_timestamp, utc_offset):
 
 #------------------------------------------------------------------------------
 # Optimization functions
+def zero_order_hold(pv_list, pv_height, pv_width):
+    """
+    Unified zero-order hold implementation that combines the best of both approaches.
+    
+    Args:
+        pv_list: numpy array with shape (N, 5) containing [u0, v0, u1, v1, depth]
+        pv_height: height of PV image
+        pv_width: width of PV image
+    
+    Returns:
+        pv_z: depth map for PV image
+    """
+    pv_z = np.zeros((pv_height, pv_width), dtype=np.float32)
+    
+    if pv_list.shape[0] == 0:
+        return pv_z
+    
+    # Extract and clip coordinates in one step (combines both approaches)
+    u0 = np.clip(pv_list[:, 0].astype(np.int32), 0, pv_width-1)
+    v0 = np.clip(pv_list[:, 1].astype(np.int32), 0, pv_height-1)
+    u1 = np.clip(pv_list[:, 2].astype(np.int32), 0, pv_width)
+    v1 = np.clip(pv_list[:, 3].astype(np.int32), 0, pv_height)
+    depth_values = pv_list[:, 4]
+    
+    # Vectorized validity check (only check for positive depth and valid rectangles)
+    valid_mask = (depth_values > 0) & (u1 > u0) & (v1 > v0)
+    
+    if not np.any(valid_mask):
+        return pv_z
+    
+    # Filter to valid entries only
+    u0_valid = u0[valid_mask]
+    v0_valid = v0[valid_mask]
+    u1_valid = u1[valid_mask]
+    v1_valid = v1[valid_mask]
+    depth_valid = depth_values[valid_mask]
+    
+    # Optimized loop - only process valid rectangles
+    for i in range(len(u0_valid)):
+        pv_z[v0_valid[i]:v1_valid[i], u0_valid[i]:u1_valid[i]] = depth_valid[i]
+    
+    return pv_z
+
 # optimized depth to pv rgb
 @nb.jit(nopython=True, cache=True)
 def numba_zero_order_hold(pv_list, pv_height, pv_width):
@@ -233,25 +276,6 @@ def create_raycast_scene_optimized(depth, world_points):
     print("4")
     rcs.add_triangles(mesh)
     print("5")
-    return rcs
-
-
-def create_raycast_scene_test(depth, world_points):
-    print("raycast func")
-    faces = optimized_mesh_generation(depth)
-    print("mesh done")
-    cpu_device = o3d.core.Device("CPU:0")
-    print("cpu_device done")
-    vertices = o3d.core.Tensor(np.asarray(world_points.reshape(-1, 3), dtype=np.float32), device=cpu_device)
-    print("vertices done")
-    triangles = o3d.core.Tensor(np.asarray(faces, dtype=np.int32), device=cpu_device)
-    print("triangles done")
-    mesh = o3d.t.geometry.TriangleMesh(vertices, triangles)
-    print("mesh done")
-    rcs = o3d.t.geometry.RaycastingScene(device=cpu_device)
-    print("rcs done")
-    rcs.add_triangles(mesh)
-    print("add_triangles done")
     return rcs
     
 

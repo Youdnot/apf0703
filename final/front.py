@@ -120,6 +120,8 @@ class FrontEnd:
         return data_pv, data_lt, data_eet
 
     def depth_projection(self, data_pv, data_lt):
+        pv_z    = np.zeros((self.pv_height, self.pv_width), dtype=np.float32)
+
         # Generate depth map for PV image -------------------------------------
         z = hl2ss_3dcv.rm_depth_normalize(data_lt.payload.depth, self.scale)
         
@@ -127,9 +129,19 @@ class FrontEnd:
         world_to_pv    = hl2ss_3dcv.world_to_reference(data_pv.pose) @ hl2ss_3dcv.rignode_to_camera(self.color_extrinsics)
         pv_to_pv_image = hl2ss_3dcv.camera_to_image(self.color_intrinsics)
 
-        pv_uv_o, pv_uv_d, pv_depth = fast_transform_and_project(
-            self.xy1_o, self.xy1_d, z, lt_to_world, world_to_pv, pv_to_pv_image
-        )
+        lt_points_o    = hl2ss_3dcv.rm_depth_to_points(self.xy1_o, z[:-1, :-1, :])        
+        world_points_o = hl2ss_3dcv.transform(lt_points_o, lt_to_world)
+        pv_points_o    = hl2ss_3dcv.transform(world_points_o, world_to_pv)
+        pv_depth       = pv_points_o[:, :, 2:]
+        pv_uv_o        = hl2ss_3dcv.project(pv_points_o, pv_to_pv_image)
+
+        lt_points_d    = hl2ss_3dcv.rm_depth_to_points(self.xy1_d, z[:-1, :-1, :])
+        world_points_d = hl2ss_3dcv.transform(lt_points_d, lt_to_world)
+        pv_uv_d        = hl2ss_3dcv.project(world_points_d, world_to_pv @ pv_to_pv_image)
+
+        # pv_uv_o, pv_uv_d, pv_depth = fast_transform_and_project(
+        #     self.xy1_o, self.xy1_d, z, lt_to_world, world_to_pv, pv_to_pv_image
+        # )
 
         pv_list_o     = hl2ss_3dcv.block_to_list(pv_uv_o)
         pv_list_d     = hl2ss_3dcv.block_to_list(pv_uv_d)
@@ -139,7 +151,8 @@ class FrontEnd:
 
         pv_list = np.hstack((np.floor(pv_list_o[mask, :]), np.floor(pv_list_d[mask, :]) + 1, pv_list_depth[mask]))
 
-        pv_z = numba_zero_order_hold(pv_list, self.pv_height, self.pv_width)
+        # pv_z = numba_zero_order_hold(pv_list, self.pv_height, self.pv_width)
+        pv_z = zero_order_hold(pv_list, self.pv_height, self.pv_width)
 
         return pv_z
         
@@ -248,43 +261,7 @@ class FrontEnd:
                            translation=data_pv.pose[3, 0:3],
                            mat3x3=np.linalg.inv(data_pv.pose[0:3, 0:3]),
                        ))
-        
-    @rr.shutdown_at_exit
-    def log_data_test(self, data_pv, data_lt) -> None:     
-        qpc_timestamp = data_pv.timestamp
-        pv_timestamp = convert_qpc_to_datetime64(qpc_timestamp, self.utc_offset)
 
-        rr.init("Unified")
-        rr.connect_grpc()
-
-        rr.log("/world", rr.ViewCoordinates.RUB, static=True)
-        rr.set_time("time", timestamp=pv_timestamp)
-        rr.set_time("frame", timestamp=self.frame_idx)
-
-        rr.log("/world/camera/image", rr.Image(image=data_pv.payload.image, color_model="bgr").compress(jpeg_quality=10))
-        rr.log("/world/sensor/depth", rr.DepthImage(data_lt.payload.depth, meter=1.0, colormap="viridis"))
-
-        # aligned_depth = pv_z.astype(np.uint16)
-        # rr.log("/world/camera/aligned_depth", rr.DepthImage(aligned_depth))
-
-        # Create pinhole camera with proper image coordinate system
-        # Rerun expects Y-down image coordinates, which matches OpenCV convention
-        rr.log("/world/camera", 
-                rr.Pinhole(
-                    focal_length=data_pv.payload.focal_length,
-                    principal_point=data_pv.payload.principal_point,
-                    resolution=(self.pv_width, self.pv_height),
-                    image_plane_distance=2.0,
-                    camera_xyz=rr.ViewCoordinates.RUB
-                ))
-        
-        # Log camera pose
-        # HoloLens pose is camera-to-world, but rerun expects world-to-camera
-        rr.log("/world/camera", 
-                    rr.Transform3D(
-                        translation=data_pv.pose[3, 0:3],
-                        mat3x3=np.linalg.inv(data_pv.pose[0:3, 0:3]),
-                    ))
 
     def run(self):
         """Main processing loop that continuously captures and processes data."""
@@ -309,7 +286,6 @@ class FrontEnd:
 
             d, combined_ray, combined_point, combined_image_point = self.eet_projection(data_pv, data_lt, data_eet)
             self.log_data(data_pv, data_lt, pv_z, combined_point, combined_image_point, combined_ray, d)
-            # self.log_data_test(data_pv, data_lt)
 
             # FPS -----------------------------------------------------------------
             # ~5 FPS for 1920x1080
@@ -355,8 +331,9 @@ if __name__ == "__main__":
         try:
             color, pv_z, timestamp = frontend.queue.get()
             # print(f"Received data - timestamp: {timestamp}")
-            # cv2.imshow("Image", color)
-            # cv2.waitKey(1)
+            cv2.imshow("Image", color)
+            cv2.imshow('Depth', hl2ss_3dcv.rm_depth_colormap(pv_z, max_depth=3.0))
+            cv2.waitKey(1)
         
         except KeyboardInterrupt:
             print("Interrupted by user")
