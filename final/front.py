@@ -178,9 +178,15 @@ class FrontEnd:
 
         return d, combined_ray, combined_point, combined_image_point
     
-    def log_data(self, data_pv, data_lt, pv_z, combined_point, combined_image_point, combined_ray, d):
+    @rr.shutdown_at_exit
+    def log_data(self, data_pv, data_lt, pv_z, combined_point, combined_image_point, combined_ray, d) -> None:
         qpc_timestamp = data_pv.timestamp
         pv_timestamp = convert_qpc_to_datetime64(qpc_timestamp, self.utc_offset)
+
+        rr.init("Unified")
+        rr.connect_grpc()
+
+        rr.log("/world", rr.ViewCoordinates.RUB, static=True)
         rr.set_time("time", timestamp=pv_timestamp)
         rr.set_time("frame", timestamp=self.frame_idx)
 
@@ -238,42 +244,47 @@ class FrontEnd:
                            mat3x3=np.linalg.inv(data_pv.pose[0:3, 0:3]),
                        ))
         
-        def log_data_test(self, data_pv, data_lt, pv_z):
-            qpc_timestamp = data_pv.timestamp
-            pv_timestamp = convert_qpc_to_datetime64(qpc_timestamp, self.utc_offset)
-            rr.set_time("time", timestamp=pv_timestamp)
-            rr.set_time("frame", timestamp=self.frame_idx)
+    @rr.shutdown_at_exit
+    def log_data_test(self, data_pv, data_lt) -> None:     
+        qpc_timestamp = data_pv.timestamp
+        pv_timestamp = convert_qpc_to_datetime64(qpc_timestamp, self.utc_offset)
 
-            rr.log("/world/camera/image", rr.Image(image=data_pv.payload.image, color_model="bgr").compress(jpeg_quality=10))
-            rr.log("/world/sensor/depth", rr.DepthImage(data_lt.payload.depth, meter=1.0, colormap="viridis"))
+        rr.init("Unified")
+        rr.connect_grpc()
 
-            # aligned_depth = pv_z.astype(np.uint16)
-            # rr.log("/world/camera/aligned_depth", rr.DepthImage(aligned_depth))
+        rr.log("/world", rr.ViewCoordinates.RUB, static=True)
+        rr.set_time("time", timestamp=pv_timestamp)
+        rr.set_time("frame", timestamp=self.frame_idx)
 
-            # Create pinhole camera with proper image coordinate system
-            # Rerun expects Y-down image coordinates, which matches OpenCV convention
-            rr.log("/world/camera", 
-                    rr.Pinhole(
-                        focal_length=data_pv.payload.focal_length,
-                        principal_point=data_pv.payload.principal_point,
-                        resolution=(self.pv_width, self.pv_height),
-                        image_plane_distance=2.0,
-                        camera_xyz=rr.ViewCoordinates.RUB
+        rr.log("/world/camera/image", rr.Image(image=data_pv.payload.image, color_model="bgr").compress(jpeg_quality=10))
+        rr.log("/world/sensor/depth", rr.DepthImage(data_lt.payload.depth, meter=1.0, colormap="viridis"))
+
+        # aligned_depth = pv_z.astype(np.uint16)
+        # rr.log("/world/camera/aligned_depth", rr.DepthImage(aligned_depth))
+
+        # Create pinhole camera with proper image coordinate system
+        # Rerun expects Y-down image coordinates, which matches OpenCV convention
+        rr.log("/world/camera", 
+                rr.Pinhole(
+                    focal_length=data_pv.payload.focal_length,
+                    principal_point=data_pv.payload.principal_point,
+                    resolution=(self.pv_width, self.pv_height),
+                    image_plane_distance=2.0,
+                    camera_xyz=rr.ViewCoordinates.RUB
+                ))
+        
+        # Log camera pose
+        # HoloLens pose is camera-to-world, but rerun expects world-to-camera
+        rr.log("/world/camera", 
+                    rr.Transform3D(
+                        translation=data_pv.pose[3, 0:3],
+                        mat3x3=np.linalg.inv(data_pv.pose[0:3, 0:3]),
                     ))
-            
-            # Log camera pose
-            # HoloLens pose is camera-to-world, but rerun expects world-to-camera
-            rr.log("/world/camera", 
-                        rr.Transform3D(
-                            translation=data_pv.pose[3, 0:3],
-                            mat3x3=np.linalg.inv(data_pv.pose[0:3, 0:3]),
-                        ))
 
     def run(self):
         """Main processing loop that continuously captures and processes data."""
         print("FrontEnd process started...")
-        
-        # Initialize streams in the worker process
+
         self.initialize_streams()
         
         while True:
@@ -292,7 +303,7 @@ class FrontEnd:
 
             # d, combined_ray, combined_point, combined_image_point = self.eet_projection(data_pv, data_lt, data_eet)
             # self.log_data(data_pv, data_lt, pv_z, combined_point, combined_image_point, combined_ray, d)
-            # self.log_data_test(data_pv, data_lt, pv_z)
+            self.log_data_test(data_pv, data_lt)
 
             # FPS -----------------------------------------------------------------
             # ~5 FPS for 1920x1080
@@ -317,17 +328,17 @@ class FrontEnd:
 
 # Example usage (similar to demo.py main function)
 if __name__ == "__main__":
-    # Initialize rerun
-    rr.init("Unified")
-    rr.spawn()
-    rr.log("/world", rr.ViewCoordinates.RUB, static=True)
-
     import cv2
 
     frame_queue = Queue()
 
     frontend = FrontEnd(queue=frame_queue)
-    # frontend.initialize_streams()
+
+    # Initialize rerun
+    rr.init("Unified")
+    rr.spawn(connect=False)  # this is the Viewer that each child process will connect to
+    # rr.log("/world", rr.ViewCoordinates.RUB, static=True)
+
 
     p = Process(target=frontend.run, name="FrontEndProcess")
     p.start()
