@@ -27,8 +27,10 @@ def task(child_index: int) -> None:
                 labels=title,
             ),
         )
+    # rr.rerun_shutdown()
 
 def main() -> None:
+#    multiprocessing.set_start_method("spawn", force=True)
    # … existing code …
 
    rr.init("rerun_example_multiprocessing")

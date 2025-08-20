@@ -6,8 +6,8 @@ from multiprocessing import Process, Queue
 
 import hl2ss
 import hl2ss_lnm
-import hl2ss_mp
 import hl2ss_3dcv
+import hl2ss_mp
 import hl2ss_utilities
 
 from data_utils import *
@@ -109,17 +109,14 @@ class FrontEnd:
         _, data_lt = self.sink_lt.get_nearest(data_pv.timestamp)
         if ((data_lt is None) or (not hl2ss.is_valid_pose(data_lt.pose))):
             return None, None, None
-        
         # Get EET frame
         _, data_eet = self.sink_eet.get_most_recent_frame()
-        if ((data_eet is None) or (not hl2ss.is_valid_pose(data_eet.pose))):
+        if ((data_eet is None) or (not hl2ss.is_valid_pose(data_eet.pose)) or (not data_eet.payload.combined_ray_valid)):
             return None, None, None
-        
         # Update PV intrinsics ------------------------------------------------
         # PV intrinsics may change between frames due to autofocus
         self.pv_intrinsics = hl2ss_3dcv.pv_update_intrinsics(self.pv_intrinsics, data_pv.payload.focal_length, data_pv.payload.principal_point)
         self.color_intrinsics, self.color_extrinsics = hl2ss_3dcv.pv_fix_calibration(self.pv_intrinsics, self.pv_extrinsics)
-        
         return data_pv, data_lt, data_eet
 
     def depth_projection(self, data_pv, data_lt):
@@ -148,9 +145,21 @@ class FrontEnd:
         
 
     def eet_projection(self, data_pv, data_lt, data_eet):
+        d = None
+        combined_ray = None
+        combined_point = None
+        combined_image_point = None
+
+        color = None
         world_to_pv_image = None
-        if (hl2ss.is_valid_pose(data_pv.pose)):
-            world_to_pv_image = hl2ss_3dcv.world_to_reference(data_pv.pose) @ hl2ss_3dcv.rignode_to_camera(self.color_extrinsics) @ hl2ss_3dcv.camera_to_image(self.color_intrinsics)
+        if ((data_pv is not None)):
+            color = data_pv.payload.image
+            if (hl2ss.is_valid_pose(data_pv.pose)):
+                world_to_pv_image = hl2ss_3dcv.world_to_reference(data_pv.pose) @ hl2ss_3dcv.rignode_to_camera(self.color_extrinsics) @ hl2ss_3dcv.camera_to_image(self.color_intrinsics)
+
+        eet = None
+        if ((data_eet is not None) and (hl2ss.is_valid_pose(data_eet.pose))):
+            eet = data_eet.payload
 
         rcs = None
         if ((data_lt is not None) and (hl2ss.is_valid_pose(data_lt.pose)) and (data_lt.timestamp != self.last_lt_ts)):
@@ -161,15 +170,7 @@ class FrontEnd:
             lt_to_world  = hl2ss_3dcv.camera_to_rignode(self.calibration_lt.extrinsics) @ hl2ss_3dcv.reference_to_world(data_lt.pose)
             points       = hl2ss_3dcv.rm_depth_to_points(self.xy1, hl2ss_3dcv.rm_depth_normalize(depth, self.scale))
             world_points = hl2ss_3dcv.transform(points, lt_to_world)
-            
             rcs = create_raycast_scene_optimized(depth, world_points)
-
-        color = None
-        eet = None
-
-        color = data_pv.payload.image
-        eet = data_eet.payload
-
         if (color is not None):
             if ((world_to_pv_image is not None) and (eet is not None) and (data_eet.pose is not None) and (rcs is not None)):
                 if (eet.combined_ray_valid):
@@ -306,9 +307,9 @@ class FrontEnd:
                 print(f"Removed old data at {old_data[-1]}")
             self.queue.put((data_pv.payload.image, pv_z, data_pv.timestamp))
 
-            # d, combined_ray, combined_point, combined_image_point = self.eet_projection(data_pv, data_lt, data_eet)
-            # self.log_data(data_pv, data_lt, pv_z, combined_point, combined_image_point, combined_ray, d)
-            self.log_data_test(data_pv, data_lt)
+            d, combined_ray, combined_point, combined_image_point = self.eet_projection(data_pv, data_lt, data_eet)
+            self.log_data(data_pv, data_lt, pv_z, combined_point, combined_image_point, combined_ray, d)
+            # self.log_data_test(data_pv, data_lt)
 
             # FPS -----------------------------------------------------------------
             # ~5 FPS for 1920x1080
@@ -333,6 +334,7 @@ class FrontEnd:
 
 # Example usage (similar to demo.py main function)
 if __name__ == "__main__":
+    multiprocessing.set_start_method('spawn')
     import cv2
 
     frame_queue = Queue()
@@ -353,8 +355,8 @@ if __name__ == "__main__":
         try:
             color, pv_z, timestamp = frontend.queue.get()
             # print(f"Received data - timestamp: {timestamp}")
-            cv2.imshow("Image", color)
-            cv2.waitKey(1)
+            # cv2.imshow("Image", color)
+            # cv2.waitKey(1)
         
         except KeyboardInterrupt:
             print("Interrupted by user")
