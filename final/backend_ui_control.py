@@ -2,6 +2,7 @@ import time
 from multiprocessing import Process, Queue, Event
 
 import random
+import numpy as np
 from pynput import keyboard
 import json
 import math
@@ -186,7 +187,7 @@ def load_sequence(filename: str):
 
     return digits, is_target, intervals, stimulus_duration
 
-class FrameUI:
+class AlertUI:
     """A class to manage the creation and destruction of a UI frame.
 
     This class encapsulates the logic for creating a rectangular frame made of
@@ -368,7 +369,7 @@ def cpt(ipc, key_dict, sequence_filename):
 
 def alert(ipc, obstacle_mask, max_frame_count=10):
     '''alert frame control'''
-    frame_ui = FrameUI(ipc)
+    frame_ui = AlertUI(ipc)
 
     frame_count = 0
     alert = False
@@ -431,8 +432,159 @@ def adaptive_movement(ipc, key_dict, mask_queue):
         
     #     time.sleep(0.05)
 
+def unity_to_pixel(unity_position):
+    '''
+    Unity position to pixel position
+    basically reverse ver of apfcalculator's _convert_coordinates
+    '''
+    pixel_position = np.array(unity_position[:2])
+    pixel_position *= 226/0.1
+    pixel_position += np.array([618, 329])
+
+    return pixel_position
 
 from apf import APFCalculator
+
+class UIController:
+    def __init__(self, offset, mask_queue, sequence_filename):
+        self.host = "169.254.10.1"
+        self.offset = offset
+
+        if offset == 'left':
+            self.anchor = [-0.08, -0.1, 0.5]
+        elif offset == 'right':
+            self.anchor = [0.08, -0.1, 0.5]
+
+        self.key_dict = {}
+        self.mask_queue = mask_queue
+        self.sequence_filename = sequence_filename
+
+        anchor_pixel = unity_to_pixel(self.anchor)
+
+        self.calculator = APFCalculator(anchor=anchor_pixel, position=anchor_pixel, mask_queue=self.mask_queue)
+
+        self.ipc = hl2ss_lnm.ipc_umq(self.host, hl2ss.IPCPort.UNITY_MESSAGE_QUEUE)
+        self.ipc.open()
+
+        # Clean before testing
+        display_list = hl2ss_rus.command_buffer()
+        display_list.begin_display_list() # Begin command sequence
+        display_list.remove_all() # Remove all objects that were created remotely
+        display_list.end_display_list() # End command sequence
+        self.ipc.push(display_list) # Send commands to server
+
+        self.alert_ui = AlertUI(self.ipc)
+
+    def init_element(self):
+        text_position = self.anchor
+        bg_position = [*text_position[:2], text_position[2] + 0.01]
+
+        bg_key = create_element_quad(self.ipc, key=0,
+                    position=bg_position, rotation=[0, 0, 0, 1], scale=[0.2, 0.15, 0.01],
+                    rgba=[0.1, 0.1, 0.8, 1])
+        
+        text_key = create_element_text(self.ipc, key=0,
+                        font_size=0.4, text=str(0),
+                        position=text_position, rotation=[0, 0, 0, 1], scale=[2, 2, 1],
+                        rgba=[1, 1, 1, 1])
+        
+        self.key_dict = {
+            'bg': bg_key,
+            'text': text_key,
+        }
+
+    def intro(self, countdown=10):
+        key = 0
+        welcome_text = f'Welcome to experiment!\nStart in {countdown} seconds...'
+        # Create starting text object
+        intro_key = create_element_text(self.ipc, key,
+                        font_size=0.4, text=welcome_text,
+                        position=[0, 0, 0.5], rotation=[0, 0, 0, 1], scale=[1, 1, 1],
+                        rgba=[1, 1, 1, 1])
+        print(f'Text object created with id {intro_key}')
+
+        # Countdown
+        for i in range(countdown):
+            seconds_left = countdown - i
+            text = str(f"Welcome to experiment!\nStart in {seconds_left} seconds...")
+            update_text(self.ipc, intro_key,
+                        font_size=0.4, text=text,
+                        position=[0, 0, 0.5], rotation=[0, 0, 0, 1], scale=[1, 1, 1],
+                        rgba=[1, 1, 1, 1])
+            time.sleep(1)
+
+        update_text(self.ipc, intro_key,
+                        font_size=0.4, text="Starting now!",
+                        position=[0, 0, 0.5], rotation=[0, 0, 0, 1], scale=[1, 1, 1],
+                        rgba=[1, 1, 1, 1])
+
+        time.sleep(1)
+
+        destroy_element(self.ipc, intro_key)
+
+    def cpt(self):
+        '''continuous performance task'''
+
+        digits, is_target, intervals, stimulus_duration = load_sequence(self.sequence_filename)
+
+        text_key = self.key_dict['text']
+        # bg_key = self.key_dict['bg']
+
+        try:
+            for i, (digit, target, interval) in enumerate(zip(digits, is_target, intervals)):
+                target_str = "【目标】" if target else "【非目标】"
+                print(f"第{i+1:2d}个刺激: {digit} {target_str}")
+
+                text = str(digit)
+                update_text_content(self.ipc, text_key,
+                        font_size=0.4, text=text,
+                        rgba=[1, 1, 1, 1])
+                time.sleep(stimulus_duration)
+                interval_duration = interval / 1000.0
+                time.sleep(interval_duration)
+
+        except KeyboardInterrupt:
+            print("\n播放已停止")
+                
+        print("\n播放完成")
+
+    def alert(self, obstacle_mask, max_frame_count=10):
+        '''alert frame control'''
+
+        frame_count = 0
+        alert = False
+
+        while True:
+            if obstacle_mask.any() and not alert:
+                self.alert_ui.create()
+                frame_count = 0
+                alert = True
+            elif obstacle_mask.any() and alert:
+                frame_count = 0
+                alert = True
+            elif not obstacle_mask.any() and alert:
+                frame_count += 1
+
+            if frame_count > max_frame_count and alert:
+                self.alert_ui.destroy()
+                frame_count = 0
+                alert = False
+
+            time.sleep(0.1)
+
+    def adaptive_movement(self):
+        pass
+
+    def close(self):
+        # Clean before exit
+        display_list = hl2ss_rus.command_buffer()
+        display_list.begin_display_list() # Begin command sequence
+        display_list.remove_all() # Remove all objects that were created remotely
+        display_list.end_display_list() # End command sequence
+        self.ipc.push(display_list) # Send commands to server
+        
+        self.ipc.close()
+
 
 if __name__ == "__main__":
     # q = Queue()
@@ -442,51 +594,58 @@ if __name__ == "__main__":
     # p.join()
 
     # HoloLens address
-    host = "169.254.10.1"
+    # host = "169.254.10.1"
 
-    # Define stop event
-    stop_event = Event()
+    # # Define stop event
+    # stop_event = Event()
 
-    def on_press(key):
-        if (key == keyboard.Key.esc): 
-            stop_event.set()
-            return False
-        return True
+    # def on_press(key):
+    #     if (key == keyboard.Key.esc): 
+    #         stop_event.set()
+    #         return False
+    #     return True
 
-    listener = keyboard.Listener(on_press=on_press)
-    listener.start()
+    # listener = keyboard.Listener(on_press=on_press)
+    # listener.start()
 
-    ipc = hl2ss_lnm.ipc_umq(host, hl2ss.IPCPort.UNITY_MESSAGE_QUEUE)
-    ipc.open()
+    # ipc = hl2ss_lnm.ipc_umq(host, hl2ss.IPCPort.UNITY_MESSAGE_QUEUE)
+    # ipc.open()
 
-    clean_up(ipc)
+    # clean_up(ipc)
 
-    key_dict = init(ipc, offset='right')
+    # key_dict = init(ipc, offset='right')
 
-    intro(ipc, countdown=2)
+    # intro(ipc, countdown=2)
 
-    sequence_filename = 'assets/cpt_sequence.json'
+    # sequence_filename = 'assets/cpt_sequence.json'
 
-    # cpt only change content of text
-    p1 = Process(target=cpt, args=(ipc, key_dict, sequence_filename))
-    # adaptive movement only change position of text and bg
-    # remember to add position input for it
-    p2 = Process(target=adaptive_movement, args=(ipc, key_dict))
+    # # cpt only change content of text
+    # p1 = Process(target=cpt, args=(ipc, key_dict, sequence_filename))
+    # # adaptive movement only change position of text and bg
+    # # remember to add position input for it
+    # p2 = Process(target=adaptive_movement, args=(ipc, key_dict))
 
-    p1.start()
+    # p1.start()
 
-    time.sleep(1)
+    # time.sleep(1)
 
-    p2.start()
+    # p2.start()
 
-    p1.join()
-    p2.join()
+    # p1.join()
+    # p2.join()
 
 
-    clean_up(ipc)
+    # clean_up(ipc)
 
-    # Close
+    # # Close
 
-    stop_event.wait()
-    ipc.close()
-    listener.join()
+    # stop_event.wait()
+    # ipc.close()
+    # listener.join()
+
+    ui_controller = UIController(offset='right', mask_queue=Queue(), sequence_filename='assets/cpt_sequence.json')
+    ui_controller.init_element()
+    ui_controller.intro()
+    ui_controller.cpt()
+
+    ui_controller.close()

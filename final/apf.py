@@ -4,10 +4,10 @@ import rerun as rr
 
 class APFCalculator:
 
-    def __init__(self, anchor, position, velocity, mask_queue):
+    def __init__(self, anchor, position, mask_queue):
         self.anchor = anchor
         self.position = position
-        self.velocity = velocity
+        self.velocity = 0
         self.mask_queue: Queue = mask_queue
 
         self.last_mask = None
@@ -173,8 +173,6 @@ class APFCalculator:
     #     rr.init("Unified")
     #     rr.connect_grpc()
 
-
-
     def run(self):
         if self.mask_queue.qsize() > 0:
             obstacle_mask = self.mask_queue.get()
@@ -186,11 +184,3 @@ class APFCalculator:
                 self.update_position_and_velocity(self.last_mask)
 
         return self.converted_pos
-    
-if __name__ == "__main__":
-    anchor = np.array([0, 0, 0])
-    position = np.array([0, 0, 0])
-    velocity = np.array([0, 0, 0])
-    mask_queue = Queue()
-    apf = APFCalculator(anchor, position, velocity, mask_queue)
-    apf.run()
