@@ -76,9 +76,8 @@ if __name__ == "__main__":
             color, pv_z, timestamp = frame_queue.get()
             # print(f"Received data - timestamp: {timestamp}")
             # cv2.imshow("Image", color)
-            cv2.imshow('Depth', hl2ss_3dcv.rm_depth_colormap(pv_z, max_depth=3.0))
-            cv2.waitKey(1)
-
+            # cv2.imshow('Depth', hl2ss_3dcv.rm_depth_colormap(pv_z, max_depth=3.0))
+            # cv2.waitKey(1)
             
             print(f"[Frame {frame_idx}] Processing live frame...")
             process_image = tracker.add_image(color)
@@ -96,11 +95,11 @@ if __name__ == "__main__":
             print(f"merged_bool_mask: {merged_bool_mask.shape}")
             # 将布尔掩码转换为uint8格式用于显示
             grey_scale_mask = (merged_bool_mask * 255).astype(np.uint8)
-            cv2.imshow("Merged Bool Mask", grey_scale_mask)
+            # cv2.imshow("Merged Bool Mask", grey_scale_mask)
 
 
             process_image_bgr = cv2.cvtColor(process_image, cv2.COLOR_RGB2BGR)
-            cv2.imshow("Live Inference", process_image_bgr)
+            # cv2.imshow("Live Inference", process_image_bgr)
 
             # Transpose and flip the maskto match the coordinate system
             obstacle_mask = np.flip(merged_bool_mask.T, axis=(1))
@@ -116,7 +115,7 @@ if __name__ == "__main__":
             # print(f"utc_time: {utc_time}")
             rr.set_time("time", timestamp=utc_time)
 
-            rr.log("/detection/image", rr.Image(image=process_image, color_model="rgb").compress(jpeg_quality=10))
+            rr.log("/detection/image", rr.Image(image=process_image_bgr, color_model="bgr").compress(jpeg_quality=10))
             rr.log("/detection/mask", rr.Image(image=grey_scale_mask).compress(jpeg_quality=10))   
 
             frame_idx += 1
