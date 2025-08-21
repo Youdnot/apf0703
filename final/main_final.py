@@ -111,6 +111,11 @@ if __name__ == "__main__":
                 # print(f"Removed old data at {old_data[-1]}")
             mask_queue.put(obstacle_mask)
 
+            now_utc = datetime.utcnow()
+            utc_time = np.datetime64(now_utc, 'ns')
+            # print(f"utc_time: {utc_time}")
+            rr.set_time("time", timestamp=utc_time)
+
             rr.log("/detection/image", rr.Image(image=process_image, color_model="rgb").compress(jpeg_quality=10))
             rr.log("/detection/mask", rr.Image(image=grey_scale_mask).compress(jpeg_quality=10))   
 

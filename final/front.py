@@ -4,6 +4,7 @@ import open3d as o3d
 import multiprocessing
 from multiprocessing import Process, Queue
 import numba as nb
+from datetime import datetime
 
 import hl2ss
 import hl2ss_lnm
@@ -141,7 +142,7 @@ class FrontEnd:
         datetime_obj = np.datetime64(unix_ns, 'ns')
 
         # Downsample
-        datetime_obj = datetime_obj.astype('datetime64[ms]')
+        # datetime_obj = datetime_obj.astype('datetime64[ms]')
         return datetime_obj
 
     def _zero_order_hold(self, pv_list, pv_height, pv_width):
@@ -354,13 +355,19 @@ class FrontEnd:
     def log_data(self, data_pv, data_lt, pv_z, combined_point, combined_image_point, combined_ray, d) -> None:
         qpc_timestamp = data_pv.timestamp
         pv_timestamp = self._convert_qpc_to_datetime64(qpc_timestamp, self.utc_offset)
+        # print(f"pv_timestamp: {pv_timestamp}")
 
         rr.init("Unified")
         rr.connect_grpc()
 
         rr.log("/world", rr.ViewCoordinates.RUB, static=True)
-        rr.set_time("time", timestamp=pv_timestamp)
-        rr.set_time("frame", timestamp=self.frame_idx)
+
+        now_utc = datetime.utcnow()
+        utc_time = np.datetime64(now_utc, 'ns')
+        # print(f"utc_time: {utc_time}")
+        rr.set_time("time", timestamp=utc_time)
+        rr.set_time("device time", timestamp=pv_timestamp)
+        # rr.set_time("frame", timestamp=self.frame_idx)
 
         rr.log("/world/camera/image", rr.Image(image=data_pv.payload.image, color_model="bgr").compress(jpeg_quality=10))
         rr.log("/world/sensor/depth", rr.DepthImage(data_lt.payload.depth, meter=1.0, colormap="viridis"))
