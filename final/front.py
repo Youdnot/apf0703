@@ -306,7 +306,8 @@ class FrontEnd:
         pv_list = np.hstack((np.floor(pv_list_o[mask, :]), np.floor(pv_list_d[mask, :]) + 1, pv_list_depth[mask]))
 
         pv_z = numba_zero_order_hold(pv_list, self.pv_height, self.pv_width)
-        # pv_z = self._zero_order_hold(pv_list, self.pv_height, self.pv_width)
+
+        pv_z = pv_z.astype(np.float16)
 
         return pv_z
         
@@ -364,7 +365,7 @@ class FrontEnd:
         rr.log("/world/camera/image", rr.Image(image=data_pv.payload.image, color_model="bgr").compress(jpeg_quality=10))
         rr.log("/world/sensor/depth", rr.DepthImage(data_lt.payload.depth, meter=1.0, colormap="viridis"))
 
-        # about 3.5m per frame for 720p
+        # about 1.6m per frame as f16 for 720p
         rr.log("/world/camera/aligned_depth", rr.DepthImage(pv_z, meter=1.0, colormap="viridis"))
         
         if (combined_point is not None):
