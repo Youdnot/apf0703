@@ -176,15 +176,13 @@ class APFCalculator:
 
 
     def run(self):
-        # 还要补一开始converted_pos为none的处理情况
-        # 这里要补一个缓存逻辑，没有get到按上一个缓存的计算
-        try:
+        if self.mask_queue.qsize() > 0:
             obstacle_mask = self.mask_queue.get()
             self.update_position_and_velocity(obstacle_mask)
 
             self.last_mask = obstacle_mask
-        except Empty:
-            if self.last_mask is None:
+        elif (self.mask_queue.qsize() == 0):
+            if self.last_mask is not None:
                 self.update_position_and_velocity(self.last_mask)
 
         return self.converted_pos
