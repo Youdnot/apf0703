@@ -10,7 +10,7 @@ import hl2ss_3dcv
 import hl2ss_mp
 import hl2ss_utilities
 
-from data_utils import *
+# from data_utils import *
 
 class FrontEnd:
     """Simple producer using an instance method as the Process target.
@@ -99,6 +99,146 @@ class FrontEnd:
         self.vi_counter = hl2ss_utilities.framerate_counter()
         self.vi_counter.reset()
 
+    def _convert_qpc_to_datetime64(self, qpc_timestamp, utc_offset):
+        """
+        Convert a QPC timestamp to numpy.datetime64 format.
+        
+        Args:
+            qpc_timestamp: QPC domain timestamp (in 100-nanosecond units).
+            utc_offset: UTC offset (in 100-nanosecond units).
+        
+        Returns:
+            numpy.datetime64: Converted timestamp with nanosecond precision.
+        """
+        # Convert QPC to Windows FILETIME (UTC)
+        filetime = hl2ss.ts_qpc_to_filetime(qpc_timestamp, utc_offset)
+        
+        # Convert FILETIME to Unix time (in 100-nanoseconds)
+        unix_hns = hl2ss.ts_filetime_to_unix_hns(filetime)
+        
+        # Convert to numpy.datetime64 with nanosecond precision
+        # Convert 100-nanoseconds to nanosecondsimport open3d as o3d
+        unix_ns = unix_hns * 100
+        
+        # Create numpy.datetime64 object
+        datetime_obj = np.datetime64(unix_ns, 'ns')
+
+        # Downsample
+        datetime_obj = datetime_obj.astype('datetime64[ms]')
+        return datetime_obj
+
+    def _zero_order_hold(self, pv_list, pv_height, pv_width):
+        """
+        Unified zero-order hold implementation that combines the best of both approaches.
+        
+        Args:
+            pv_list: numpy array with shape (N, 5) containing [u0, v0, u1, v1, depth]
+            pv_height: height of PV image
+            pv_width: width of PV image
+        
+        Returns:
+            pv_z: depth map for PV image
+        """
+        pv_z = np.zeros((pv_height, pv_width), dtype=np.float32)
+        
+        if pv_list.shape[0] == 0:
+            return pv_z
+        
+        # Extract and clip coordinates in one step (combines both approaches)
+        u0 = np.clip(pv_list[:, 0].astype(np.int32), 0, pv_width-1)
+        v0 = np.clip(pv_list[:, 1].astype(np.int32), 0, pv_height-1)
+        u1 = np.clip(pv_list[:, 2].astype(np.int32), 0, pv_width)
+        v1 = np.clip(pv_list[:, 3].astype(np.int32), 0, pv_height)
+        depth_values = pv_list[:, 4]
+        
+        # Vectorized validity check (only check for positive depth and valid rectangles)
+        valid_mask = (depth_values > 0) & (u1 > u0) & (v1 > v0)
+        
+        if not np.any(valid_mask):
+            return pv_z
+        
+        # Filter to valid entries only
+        u0_valid = u0[valid_mask]
+        v0_valid = v0[valid_mask]
+        u1_valid = u1[valid_mask]
+        v1_valid = v1[valid_mask]
+        depth_valid = depth_values[valid_mask]
+        
+        # Optimized loop - only process valid rectangles
+        for i in range(len(u0_valid)):
+            pv_z[v0_valid[i]:v1_valid[i], u0_valid[i]:u1_valid[i]] = depth_valid[i]
+        
+        return pv_z
+
+    def _optimized_mesh_generation(self, depth):
+        """
+        Optimized mesh generation using numpy vectorization instead of nested for loops.
+        
+        Args:
+            depth: depth image array
+            world_points: 3D world coordinates for each depth pixel
+        
+        Returns:
+            faces: list of triangle face indices
+        """
+        h, w = depth.shape[-2:]
+        mask = depth > 0
+        
+        # Create coordinate grids using numpy
+        i_coords, j_coords = np.meshgrid(np.arange(1, h), np.arange(1, w), indexing='ij')
+        
+        # Flatten coordinates for vectorized operations
+        i_flat = i_coords.flatten()
+        j_flat = j_coords.flatten()
+        
+        # Calculate all corner coordinates at once
+        ul_i = (i_flat - 1) * w + (j_flat - 1)  # upper-left
+        ur_i = (i_flat - 1) * w + j_flat        # upper-right  
+        bl_i = i_flat * w + (j_flat - 1)        # bottom-left
+        br_i = i_flat * w + j_flat              # bottom-right
+        
+        # Get validity masks for all corners
+        ul_valid = mask[i_flat - 1, j_flat - 1]
+        ur_valid = mask[i_flat - 1, j_flat]
+        bl_valid = mask[i_flat, j_flat - 1]
+        br_valid = mask[i_flat, j_flat]
+        
+        # Create triangles using vectorized conditions
+        faces = []
+        
+        # Triangle 1: bottom-left, bottom-right, upper-right
+        triangle1_mask = bl_valid & br_valid & ur_valid
+        triangle1_indices = np.column_stack((bl_i[triangle1_mask], 
+                                            br_i[triangle1_mask], 
+                                            ur_i[triangle1_mask]))
+        
+        # Triangle 2: upper-right, upper-left, bottom-left  
+        triangle2_mask = ur_valid & ul_valid & bl_valid
+        triangle2_indices = np.column_stack((ur_i[triangle2_mask], 
+                                            ul_i[triangle2_mask], 
+                                            bl_i[triangle2_mask]))
+        
+        # Combine all triangles
+        if len(triangle1_indices) > 0:
+            faces.extend(triangle1_indices.tolist())
+        if len(triangle2_indices) > 0:
+            faces.extend(triangle2_indices.tolist())
+        
+        return faces
+
+    def _create_raycast_scene_optimized(self, depth, world_points):
+        """
+        Create raycast scene with optimized mesh generation.
+        """
+        faces = self._optimized_mesh_generation(depth)
+
+        vertices = o3d.core.Tensor(np.asarray(world_points.reshape(-1, 3), dtype=np.float32))
+        triangles = o3d.core.Tensor(np.asarray(faces, dtype=np.int32))
+        mesh = o3d.t.geometry.TriangleMesh(vertices, triangles)
+        rcs = o3d.t.geometry.RaycastingScene()
+        rcs.add_triangles(mesh)
+        return rcs
+
     def get_data(self):
         """Get synchronized PV, depth, and EET data."""
         # Get PV frame and nearest (in time) RM Depth Long Throw frame
@@ -151,8 +291,8 @@ class FrontEnd:
 
         pv_list = np.hstack((np.floor(pv_list_o[mask, :]), np.floor(pv_list_d[mask, :]) + 1, pv_list_depth[mask]))
 
-        # pv_z = numba_zero_order_hold(pv_list, self.pv_height, self.pv_width)
-        pv_z = zero_order_hold(pv_list, self.pv_height, self.pv_width)
+        # pv_z = self._numba_zero_order_hold(pv_list, self.pv_height, self.pv_width)
+        pv_z = self._zero_order_hold(pv_list, self.pv_height, self.pv_width)
 
         return pv_z
         
@@ -183,7 +323,7 @@ class FrontEnd:
             lt_to_world  = hl2ss_3dcv.camera_to_rignode(self.calibration_lt.extrinsics) @ hl2ss_3dcv.reference_to_world(data_lt.pose)
             points       = hl2ss_3dcv.rm_depth_to_points(self.xy1, hl2ss_3dcv.rm_depth_normalize(depth, self.scale))
             world_points = hl2ss_3dcv.transform(points, lt_to_world)
-            rcs = create_raycast_scene_optimized(depth, world_points)
+            rcs = self._create_raycast_scene_optimized(depth, world_points)
         if (color is not None):
             if ((world_to_pv_image is not None) and (eet is not None) and (data_eet.pose is not None) and (rcs is not None)):
                 if (eet.combined_ray_valid):
@@ -199,7 +339,7 @@ class FrontEnd:
     @rr.shutdown_at_exit
     def log_data(self, data_pv, data_lt, pv_z, combined_point, combined_image_point, combined_ray, d) -> None:
         qpc_timestamp = data_pv.timestamp
-        pv_timestamp = convert_qpc_to_datetime64(qpc_timestamp, self.utc_offset)
+        pv_timestamp = self._convert_qpc_to_datetime64(qpc_timestamp, self.utc_offset)
 
         rr.init("Unified")
         rr.connect_grpc()
@@ -331,9 +471,9 @@ if __name__ == "__main__":
         try:
             color, pv_z, timestamp = frontend.queue.get()
             # print(f"Received data - timestamp: {timestamp}")
-            # cv2.imshow("Image", color)
-            # cv2.imshow('Depth', hl2ss_3dcv.rm_depth_colormap(pv_z, max_depth=3.0))
-            # cv2.waitKey(1)
+            cv2.imshow("Image", color)
+            cv2.imshow('Depth', hl2ss_3dcv.rm_depth_colormap(pv_z, max_depth=3.0))
+            cv2.waitKey(1)
         
         except KeyboardInterrupt:
             print("Interrupted by user")
