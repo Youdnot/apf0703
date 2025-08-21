@@ -3,6 +3,7 @@ import numpy as np
 import open3d as o3d
 import multiprocessing
 from multiprocessing import Process, Queue
+import numba as nb
 
 import hl2ss
 import hl2ss_lnm
@@ -11,6 +12,24 @@ import hl2ss_mp
 import hl2ss_utilities
 
 # from data_utils import *
+
+@nb.jit(nopython=True, cache=True)
+def numba_zero_order_hold(pv_list, pv_height, pv_width):
+    pv_z = np.zeros((pv_height, pv_width), dtype=np.float32)
+    
+    for n in range(pv_list.shape[0]):
+        u0 = max(0, min(int(pv_list[n, 0]), pv_width-1))
+        v0 = max(0, min(int(pv_list[n, 1]), pv_height-1))
+        u1 = max(0, min(int(pv_list[n, 2]), pv_width))
+        v1 = max(0, min(int(pv_list[n, 3]), pv_height))
+        depth = pv_list[n, 4]
+        
+        if depth > 0 and u1 > u0 and v1 > v0:
+            for v in range(v0, v1):
+                for u in range(u0, u1):
+                    pv_z[v, u] = depth
+    
+    return pv_z
 
 class FrontEnd:
     """Simple producer using an instance method as the Process target.
@@ -291,12 +310,11 @@ class FrontEnd:
 
         pv_list = np.hstack((np.floor(pv_list_o[mask, :]), np.floor(pv_list_d[mask, :]) + 1, pv_list_depth[mask]))
 
-        # pv_z = self._numba_zero_order_hold(pv_list, self.pv_height, self.pv_width)
-        pv_z = self._zero_order_hold(pv_list, self.pv_height, self.pv_width)
+        pv_z = numba_zero_order_hold(pv_list, self.pv_height, self.pv_width)
+        # pv_z = self._zero_order_hold(pv_list, self.pv_height, self.pv_width)
 
         return pv_z
         
-
     def eet_projection(self, data_pv, data_lt, data_eet):
         d = None
         combined_ray = None
@@ -401,7 +419,6 @@ class FrontEnd:
                            translation=data_pv.pose[3, 0:3],
                            mat3x3=np.linalg.inv(data_pv.pose[0:3, 0:3]),
                        ))
-
 
     def run(self):
         """Main processing loop that continuously captures and processes data."""
