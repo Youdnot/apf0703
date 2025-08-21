@@ -11,9 +11,7 @@ import hl2ss_3dcv
 import hl2ss_mp
 import hl2ss_utilities
 
-# from data_utils import *
-
-@nb.jit(nopython=True, cache=True)
+@nb.jit(nopython=True, cache=True, parallel=True)
 def numba_zero_order_hold(pv_list, pv_height, pv_width):
     pv_z = np.zeros((pv_height, pv_width), dtype=np.float32)
     
@@ -279,7 +277,8 @@ class FrontEnd:
         return data_pv, data_lt, data_eet
 
     def depth_projection(self, data_pv, data_lt):
-        pv_z    = np.zeros((self.pv_height, self.pv_width), dtype=np.float32)
+        # pv_z    = np.zeros((self.pv_height, self.pv_width), dtype=np.float32)
+        pv_z = None
 
         # Generate depth map for PV image -------------------------------------
         z = hl2ss_3dcv.rm_depth_normalize(data_lt.payload.depth, self.scale)
@@ -297,10 +296,6 @@ class FrontEnd:
         lt_points_d    = hl2ss_3dcv.rm_depth_to_points(self.xy1_d, z[:-1, :-1, :])
         world_points_d = hl2ss_3dcv.transform(lt_points_d, lt_to_world)
         pv_uv_d        = hl2ss_3dcv.project(world_points_d, world_to_pv @ pv_to_pv_image)
-
-        # pv_uv_o, pv_uv_d, pv_depth = fast_transform_and_project(
-        #     self.xy1_o, self.xy1_d, z, lt_to_world, world_to_pv, pv_to_pv_image
-        # )
 
         pv_list_o     = hl2ss_3dcv.block_to_list(pv_uv_o)
         pv_list_d     = hl2ss_3dcv.block_to_list(pv_uv_d)
@@ -369,8 +364,8 @@ class FrontEnd:
         rr.log("/world/camera/image", rr.Image(image=data_pv.payload.image, color_model="bgr").compress(jpeg_quality=10))
         rr.log("/world/sensor/depth", rr.DepthImage(data_lt.payload.depth, meter=1.0, colormap="viridis"))
 
-        # aligned_depth = pv_z.astype(np.uint16)
-        # rr.log("/world/camera/aligned_depth", rr.DepthImage(aligned_depth))
+        # about 3.5m per frame for 720p
+        rr.log("/world/camera/aligned_depth", rr.DepthImage(pv_z, meter=1.0, colormap="viridis"))
         
         if (combined_point is not None):
             rr.log("/world/camera/image/gaze_point", 
@@ -488,9 +483,9 @@ if __name__ == "__main__":
         try:
             color, pv_z, timestamp = frontend.queue.get()
             # print(f"Received data - timestamp: {timestamp}")
-            cv2.imshow("Image", color)
-            cv2.imshow('Depth', hl2ss_3dcv.rm_depth_colormap(pv_z, max_depth=3.0))
-            cv2.waitKey(1)
+            # cv2.imshow("Image", color)
+            # cv2.imshow('Depth', hl2ss_3dcv.rm_depth_colormap(pv_z, max_depth=3.0))
+            # cv2.waitKey(1)
         
         except KeyboardInterrupt:
             print("Interrupted by user")
