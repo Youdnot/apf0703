@@ -107,6 +107,34 @@ import numba as nb
 import hl2ss
 import hl2ss_3dcv
 
+def convert_qpc_to_datetime64( qpc_timestamp, utc_offset):
+    """
+    Convert a QPC timestamp to numpy.datetime64 format.
+    
+    Args:
+        qpc_timestamp: QPC domain timestamp (in 100-nanosecond units).
+        utc_offset: UTC offset (in 100-nanosecond units).
+    
+    Returns:
+        numpy.datetime64: Converted timestamp with nanosecond precision.
+    """
+    # Convert QPC to Windows FILETIME (UTC)
+    filetime = hl2ss.ts_qpc_to_filetime(qpc_timestamp, utc_offset)
+    
+    # Convert FILETIME to Unix time (in 100-nanoseconds)
+    unix_hns = hl2ss.ts_filetime_to_unix_hns(filetime)
+    
+    # Convert to numpy.datetime64 with nanosecond precision
+    # Convert 100-nanoseconds to nanosecondsimport open3d as o3d
+    unix_ns = unix_hns * 100
+    
+    # Create numpy.datetime64 object
+    datetime_obj = np.datetime64(unix_ns, 'ns')
+
+    # Downsample
+    datetime_obj = datetime_obj.astype('datetime64[ms]')
+    return datetime_obj
+
 #------------------------------------------------------------------------------
 # Optimization functions
 def zero_order_hold(pv_list, pv_height, pv_width):

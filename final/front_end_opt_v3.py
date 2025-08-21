@@ -11,6 +11,7 @@
 from pynput import keyboard
 
 import numpy as np
+import cv2
 # import open3d as o3d
 import hl2ss
 import hl2ss_lnm
@@ -211,6 +212,10 @@ if __name__ == '__main__':
                         combined_point = hl2ss_3dcv.si_ray_to_point(combined_ray, d)
                         combined_image_point = hl2ss_3dcv.project(combined_point, world_to_pv_image)
                         # hl2ss_utilities.draw_points(color, combined_image_point.astype(np.int32), radius, combined_color, thickness)
+
+        cv2.imshow("Image", color)
+        cv2.imshow('Depth', hl2ss_3dcv.rm_depth_colormap(pv_z, max_depth=3.0))
+        cv2.waitKey(1)
 
         # FPS -----------------------------------------------------------------
         # ~5 FPS for 1920x1080
