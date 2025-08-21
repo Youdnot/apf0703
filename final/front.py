@@ -366,7 +366,7 @@ class FrontEnd:
         rr.log("/world/sensor/depth", rr.DepthImage(data_lt.payload.depth, meter=1.0, colormap="viridis"))
 
         # about 1.6m per frame as f16 for 720p
-        rr.log("/world/camera/aligned_depth", rr.DepthImage(pv_z, meter=1.0, colormap="viridis"))
+        # rr.log("/world/camera/aligned_depth", rr.DepthImage(pv_z, meter=1.0, colormap="viridis"))
         
         if (combined_point is not None):
             rr.log("/world/camera/image/gaze_point", 
@@ -434,7 +434,7 @@ class FrontEnd:
             # Push data to queue for downstream processing
             if self.queue.qsize() >= 2:
                 old_data = self.queue.get()
-                print(f"Removed old data at {old_data[-1]}")
+                # print(f"Removed old data at {old_data[-1]}")
             self.queue.put((data_pv.payload.image, pv_z, data_pv.timestamp))
 
             d, combined_ray, combined_point, combined_image_point = self.eet_projection(data_pv, data_lt, data_eet)
@@ -482,7 +482,8 @@ if __name__ == "__main__":
 
     while True:
         try:
-            color, pv_z, timestamp = frontend.queue.get()
+            # color, pv_z, timestamp = frontend.queue.get()
+            color, pv_z, timestamp = frame_queue.get()
             # print(f"Received data - timestamp: {timestamp}")
             # cv2.imshow("Image", color)
             # cv2.imshow('Depth', hl2ss_3dcv.rm_depth_colormap(pv_z, max_depth=3.0))
