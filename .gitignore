@@ -3,6 +3,8 @@ external/*
 outputs/*
 calibration/*
 
+final/grounding_sam2
+
 # Python-generated files
 __pycache__/
 *.py[oc]

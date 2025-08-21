@@ -11,63 +11,6 @@ import hl2ss_lnm
 import hl2ss_rus
 
 #------------------------------------------------------------------------------
-# Shared State Manager
-class SharedStateManager:
-    """管理进程间共享状态的类"""
-    
-    def __init__(self):
-        self.manager = Manager()
-        self.shared_state = self.manager.dict()
-        self.lock = self.manager.Lock()
-        
-        # 初始化共享状态
-        self.shared_state.update({
-            'text_position': [0.08, -0.1, 0.5],  # 默认右侧位置
-            'bg_position': [0.08, -0.1, 0.51],
-            'current_text': '',
-            'text_scale': [2, 2, 1],
-            'bg_scale': [0.2, 0.15, 0.01],
-            'rotation': [0, 0, 0, 1],
-            'font_size': 0.4,
-            'text_rgba': [1, 1, 1, 1],
-            'bg_rgba': [0, 0, 0, 0.8],
-            'cpt_active': False,
-            'movement_active': False
-        })
-    
-    def update_position(self, new_position, is_bg=False):
-        """更新位置信息"""
-        with self.lock:
-            if is_bg:
-                self.shared_state['bg_position'] = new_position
-            else:
-                self.shared_state['text_position'] = new_position
-                # 背景位置跟随文字位置
-                bg_pos = new_position.copy()
-                bg_pos[2] += 0.01
-                self.shared_state['bg_position'] = bg_pos
-    
-    def update_text(self, new_text):
-        """更新文字内容"""
-        with self.lock:
-            self.shared_state['current_text'] = new_text
-    
-    def get_state(self):
-        """获取当前状态"""
-        with self.lock:
-            return dict(self.shared_state)
-    
-    def set_cpt_active(self, active):
-        """设置CPT任务状态"""
-        with self.lock:
-            self.shared_state['cpt_active'] = active
-    
-    def set_movement_active(self, active):
-        """设置运动任务状态"""
-        with self.lock:
-            self.shared_state['movement_active'] = active
-
-#------------------------------------------------------------------------------
 # Functions
 
 def create_element_quad(ipc, key,
@@ -450,7 +393,7 @@ def alert(ipc, obstacle_mask, max_frame_count=10):
 
 
 # def adaptive_movement(ipc, key_dict, obstacle_mask):
-def adaptive_movement(ipc, key_dict):
+def adaptive_movement(ipc, key_dict, mask_queue):
     '''adaptive movement
     test for process
     '''
@@ -458,20 +401,38 @@ def adaptive_movement(ipc, key_dict):
     text_key = key_dict['text']
     bg_key = key_dict['bg']
 
-    radius = 0.1
-    steps = 100
+    # test sample
+    # radius = 0.1
+    # steps = 100
 
-    for i in range(steps+10):
-        angle = 2 * math.pi * i / steps
-        x = radius * math.cos(angle)
-        y = radius * math.sin(angle)
-        update_position(ipc, bg_key,
-                    position=[x, y-0.1, 0.51], rotation=[0, 0, 0, 1], scale=[0.2, 0.15, 0.01])
-        update_position(ipc, text_key,
-                    position=[x, y-0.1, 0.5], rotation=[0, 0, 0, 1], scale=[2, 2, 1])
+    # for i in range(steps+10):
+    #     angle = 2 * math.pi * i / steps
+    #     x = radius * math.cos(angle)
+    #     y = radius * math.sin(angle)
+    #     update_position(ipc, bg_key,
+    #                 position=[x, y-0.1, 0.51], rotation=[0, 0, 0, 1], scale=[0.2, 0.15, 0.01])
+    #     update_position(ipc, text_key,
+    #                 position=[x, y-0.1, 0.5], rotation=[0, 0, 0, 1], scale=[2, 2, 1])
         
-        time.sleep(0.05)
+    #     time.sleep(0.05)
 
+    # Real one
+
+    # apf = APFCalculator(anchor, position, velocity, mask_queue)
+
+    # while True:
+    #     text_position = apf.run()
+    #     bg_position = [*text_position[:2], text_position[2] + 0.01]
+
+    #     update_position(ipc, bg_key,
+    #                 position=bg_position, rotation=[0, 0, 0, 1], scale=[0.2, 0.15, 0.01])
+    #     update_position(ipc, text_key,
+    #                 position=text_position, rotation=[0, 0, 0, 1], scale=[2, 2, 1])
+        
+    #     time.sleep(0.05)
+
+
+from apf import APFCalculator
 
 if __name__ == "__main__":
     # q = Queue()

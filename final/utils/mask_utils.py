@@ -3,7 +3,7 @@
 import numpy as np
 import torch
 
-from external.grounding_sam2.utils.mask_dictionary_model import MaskDictionaryModel
+from grounding_sam2.utils.mask_dictionary_model import MaskDictionaryModel
 
 def get_merged_bool_mask(mask_dict: MaskDictionaryModel) -> np.ndarray:
     """

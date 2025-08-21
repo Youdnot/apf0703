@@ -169,7 +169,7 @@ while True:
     current_mask_dict = tracker.last_mask_dict
     
     # 合并所有mask为bool数组
-    merged_bool_mask = get_merged_bool_mask_new(current_mask_dict, pv_z)
+    merged_bool_mask = get_merged_bool_mask_depth(current_mask_dict, pv_z)
     print(f"merged_bool_mask: {merged_bool_mask.shape}")
     # 将布尔掩码转换为uint8格式用于显示
     merged_mask_display = (merged_bool_mask * 255).astype(np.uint8)
