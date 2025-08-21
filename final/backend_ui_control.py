@@ -444,6 +444,7 @@ def unity_to_pixel(unity_position):
     return pixel_position
 
 from apf import APFCalculator
+from multiprocessing import Process
 
 class UIController:
     def __init__(self, offset, mask_queue, sequence_filename):
@@ -573,7 +574,35 @@ class UIController:
             time.sleep(0.1)
 
     def adaptive_movement(self):
-        pass
+        text_key = self.key_dict['text']
+        bg_key = self.key_dict['bg']
+
+        # test sample
+        radius = 0.1
+        steps = 100
+
+        for i in range(steps+10):
+            angle = 2 * math.pi * i / steps
+            x = radius * math.cos(angle)
+            y = radius * math.sin(angle)
+            update_position(self.ipc, bg_key,
+                        position=[x, y-0.1, 0.51], rotation=[0, 0, 0, 1], scale=[0.2, 0.15, 0.01])
+            update_position(self.ipc, text_key,
+                        position=[x, y-0.1, 0.5], rotation=[0, 0, 0, 1], scale=[2, 2, 1])
+            
+            time.sleep(0.05)
+
+    def run(self):
+        # should init be here? 
+        # self.init_element()
+
+        text_process = Process(target=self.cpt)
+        movement_process = Process(target=self.adaptive_movement)
+        text_process.start()
+        movement_process.start()
+        text_process.join()
+        movement_process.join()
+
 
     def close(self):
         # Clean before exit
@@ -645,7 +674,13 @@ if __name__ == "__main__":
 
     ui_controller = UIController(offset='right', mask_queue=Queue(), sequence_filename='assets/cpt_sequence.json')
     ui_controller.init_element()
-    ui_controller.intro()
-    ui_controller.cpt()
+    ui_controller.intro(countdown=2)
+    # ui_controller.run()
+
+    p = Process(target=ui_controller.run)
+    p.start()
+    p.join()
+
+    # ui_controller.cpt()
 
     ui_controller.close()
