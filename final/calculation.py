@@ -1,7 +1,40 @@
-import numpy as np
-from utils.convert_coordinate import convert_coordinates
+# 从左下角为原点的1080p坐标系
+# 转换为
+# 以中心点为原点的Unity Camera Space
+# 并完成scale的缩放 pixel to factor
 
-def get_attractive_force(position: np.ndarray, anchor: np.ndarray) -> np.ndarray:
+import numpy as np
+import time
+
+config_1080 = {
+    'scaling_factor': 0.1/338,
+    'center_x': 940,
+    'center_y': 576,
+}
+
+config_720 = {
+    'scaling_factor': 0.1/226,
+    'center_x': 618,
+    'center_y': 329,
+}
+
+def convert_coordinates(position, scaling_factor, center_x, center_y, depth=0.5):
+    """
+    Convert position from 1080p camera space to Unity camera space.
+    """
+    view_position = position.copy()
+    # Adjust to center of camera space
+    view_position -= np.array([center_x, center_y])
+    # Adjust amplitude from image pixel space to Unity camera space
+    view_position = view_position.astype(np.float32)
+    view_position *= scaling_factor
+    # Add depth to the z-axis
+    view_position = np.append(view_position, depth)
+    return view_position
+
+#------------------------------------------------------------------------------
+
+def get_attractive_force(position: np.ndarray, anchor: np.ndarray):
     """
     计算对锚点的吸引力（单位向量）
     
@@ -14,21 +47,11 @@ def get_attractive_force(position: np.ndarray, anchor: np.ndarray) -> np.ndarray
     """
     attractive_force = anchor - position
     modulus = np.linalg.norm(attractive_force)
-    
-    # # 设置最小距离，避免在邻近锚定点的位置产生振荡
-    # if modulus >= 10:
-    #     # 返回单位向量
-    #     attractive_force = attractive_force / modulus
-    # else:
-    #     attractive_force = np.zeros(2)
 
     # limit the force
     limit_value = 40
     if modulus > limit_value:
         attractive_force = attractive_force*(limit_value/modulus)
-
-    # reture true value
-
     
     return attractive_force
 
@@ -37,8 +60,7 @@ def get_attractive_force(position: np.ndarray, anchor: np.ndarray) -> np.ndarray
 x_coords, y_coords = np.mgrid[0:1280, 0:720]
 
 def get_repulsive_force(position: np.ndarray, anchor: np.ndarray, 
-                       obstacle_mask: np.ndarray, view_width: int, 
-                       view_height: int, d0: float) -> np.ndarray:
+                       obstacle_mask: np.ndarray, d0: float, x_coords, y_coords):
     """
     计算排斥力（单位向量）
     
@@ -56,7 +78,6 @@ def get_repulsive_force(position: np.ndarray, anchor: np.ndarray,
     Returns:
         np.ndarray: 排斥力单位向量 [x, y]
     """
-    global x_coords, y_coords
     
     if obstacle_mask.any():
         # 计算到当前位置和锚点的距离矩阵
@@ -122,12 +143,6 @@ def get_repulsive_force(position: np.ndarray, anchor: np.ndarray,
         
         modulus = np.linalg.norm(repulsive_force)
 
-        # # 返回单位向量
-        # if modulus > 1e-2:
-        #     repulsive_force = repulsive_force / modulus
-        # else:
-        #     repulsive_force = np.zeros(2)
-
         # limit the force
         limit_value = 100
         if modulus > limit_value:
@@ -138,7 +153,7 @@ def get_repulsive_force(position: np.ndarray, anchor: np.ndarray,
     
     return repulsive_force
 
-def get_total_force(position: np.ndarray, anchor: np.ndarray, obstacle_mask: np.ndarray, view_width: int, view_height: int, d0: float, k_att: float, k_rep: float) -> np.ndarray:
+def get_total_force(position: np.ndarray, anchor: np.ndarray, obstacle_mask: np.ndarray, view_width: int, view_height: int, d0: float, k_att: float, k_rep: float):
     attractive_force = get_attractive_force(position, anchor)
     repulsive_force = get_repulsive_force(position, anchor, obstacle_mask, view_width, view_height, d0)
     # print(f"Attractive Force: {attractive_force}, Repulsive Force: {repulsive_force}")
@@ -149,7 +164,7 @@ def update_position_and_velocity(cur_pos: np.ndarray, cur_vel: np.ndarray,
     anchor_point: np.ndarray, obstacle_mask: np.ndarray, 
     view_width: int, view_height: int, d0: float, 
     k_att: float, k_rep: float, damping_factor: float, 
-    max_v: float, dt: float, path_data: list) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, list]:  
+    max_v: float, dt: float):  
     """
     更新机器人位置和速度
     
@@ -183,7 +198,5 @@ def update_position_and_velocity(cur_pos: np.ndarray, cur_vel: np.ndarray,
     converted_pos = convert_coordinates(cur_pos)
 
     # print(f"Current Position: {cur_pos}, Current Velocity: {cur_vel}, Converted Position: {converted_pos}")
-    
-    path_data.append(cur_pos.copy())
 
-    return force, cur_pos, cur_vel, converted_pos, path_data
+    return force, cur_pos, cur_vel, converted_pos

@@ -28,8 +28,10 @@ shared = False
 
 # Camera parameters
 # Ignored in shared mode
-width     = 1920
-height    = 1080
+# width     = 1920
+# height    = 1080
+width     = 1280
+height    = 720
 framerate = 15  # only 15 or 30 is available
 
 # Video encoding profile and bitrate (None = default)

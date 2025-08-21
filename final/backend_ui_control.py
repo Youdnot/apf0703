@@ -509,6 +509,7 @@ if __name__ == "__main__":
     # cpt only change content of text
     p1 = Process(target=cpt, args=(ipc, key_dict, sequence_filename))
     # adaptive movement only change position of text and bg
+    # remember to add position input for it
     p2 = Process(target=adaptive_movement, args=(ipc, key_dict))
 
     p1.start()

@@ -9,8 +9,10 @@ import numpy as np
 @dataclass
 class ViewConfig:
     """视图配置参数"""
-    width: int = 1920
-    height: int = 1080
+    # width: int = 1920
+    # height: int = 1080
+    width: int = 1280
+    height: int = 720
     fps: int = 15   # for now only used in init RGBD stream
 
 @dataclass
@@ -33,8 +35,11 @@ class PhysicsConfig:
 class SimulationConfig:
     """仿真配置参数"""
     # [width, height]
-    anchor_point: np.ndarray = np.array([700.0, 350.0])
-    init_pos: np.ndarray = np.array([700.0, 350.0])
+    # anchor_point: np.ndarray = np.array([700.0, 350.0])
+    # init_pos: np.ndarray = np.array([700.0, 350.0])
+    # init_vel: np.ndarray = np.array([0.0, 0.0])
+    anchor_point: np.ndarray = np.array([350.0, 200.0])
+    init_pos: np.ndarray = np.array([350.0, 200.0])
     init_vel: np.ndarray = np.array([0.0, 0.0])
 
 @dataclass
