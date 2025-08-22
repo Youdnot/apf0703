@@ -6,6 +6,8 @@ import numpy as np
 from pynput import keyboard
 import json
 import math
+import rerun as rr
+from datetime import datetime
 
 import hl2ss
 import hl2ss_lnm
@@ -474,8 +476,6 @@ class UIController:
         display_list.end_display_list() # End command sequence
         self.ipc.push(display_list) # Send commands to server
 
-        self.alert_ui = AlertUI(self.ipc)
-
     def init_element(self):
         text_position = self.anchor
         bg_position = [*text_position[:2], text_position[2] + 0.01]
@@ -523,12 +523,13 @@ class UIController:
 
         destroy_element(self.ipc, intro_key)
 
-    def cpt(self):
+    @staticmethod
+    def cpt(ipc, key_dict, sequence_filename):
         '''continuous performance task'''
 
-        digits, is_target, intervals, stimulus_duration = load_sequence(self.sequence_filename)
+        digits, is_target, intervals, stimulus_duration = load_sequence(sequence_filename)
 
-        text_key = self.key_dict['text']
+        text_key = key_dict['text']
         # bg_key = self.key_dict['bg']
 
         try:
@@ -537,27 +538,47 @@ class UIController:
                 print(f"第{i+1:2d}个刺激: {digit} {target_str}")
 
                 text = str(digit)
-                update_text_content(self.ipc, text_key,
+                update_text_content(ipc, text_key,
                         font_size=0.4, text=text,
                         rgba=[1, 1, 1, 1])
                 time.sleep(stimulus_duration)
                 interval_duration = interval / 1000.0
                 time.sleep(interval_duration)
 
+                now_utc = datetime.utcnow()
+                utc_time = np.datetime64(now_utc, 'ns')
+                # print(f"utc_time: {utc_time}")
+                rr.set_time("time", timestamp=utc_time)
+
+                rr.init("Unified")
+                rr.connect_grpc()
+
+                rr.log("digit", rr.TextLog(text))
+                rr.log("ground truth", rr.Scalars(target))
+                rr.log("stimulus_duration", rr.TextLog(stimulus_duration))
+                rr.log("interval_duration", rr.TextLog(interval_duration))
+        
+
         except KeyboardInterrupt:
             print("\n播放已停止")
                 
         print("\n播放完成")
 
-    def alert(self, obstacle_mask, max_frame_count=10):
-        '''alert frame control'''
+    @staticmethod
+    def alert(ipc, mask_queue, max_frame_count=5):
+        '''alert frame control
+        to run in process don't use self arg
+        '''
+        alert_ui = AlertUI(ipc)
 
         frame_count = 0
         alert = False
 
         while True:
+            obstacle_mask = mask_queue.get()
+
             if obstacle_mask.any() and not alert:
-                self.alert_ui.create()
+                alert_ui.create()
                 frame_count = 0
                 alert = True
             elif obstacle_mask.any() and alert:
@@ -567,13 +588,13 @@ class UIController:
                 frame_count += 1
 
             if frame_count > max_frame_count and alert:
-                self.alert_ui.destroy()
+                alert_ui.destroy()
                 frame_count = 0
                 alert = False
 
             time.sleep(0.1)
 
-    def adaptive_movement(self):
+    def movement_test(self):
         text_key = self.key_dict['text']
         bg_key = self.key_dict['bg']
 
@@ -592,17 +613,42 @@ class UIController:
             
             time.sleep(0.05)
 
+    @staticmethod
+    def adaptive_movement(ipc, key_dict, mask_queue, calculator):
+        text_key = key_dict['text']
+        bg_key = key_dict['bg']
+
+        while True:
+            obstacle_mask = mask_queue.get()
+            text_position = calculator.run(obstacle_mask)
+
+            bg_position = [*text_position[:2], text_position[2] + 0.01]
+            update_position(ipc, bg_key,
+                            position=bg_position, rotation=[0, 0, 0, 1], scale=[0.2, 0.15, 0.01])
+            update_position(ipc, text_key,
+                            position=text_position, rotation=[0, 0, 0, 1], scale=[2, 2, 1])
+            
+            time.sleep(0.05)
+
+
     def run(self):
         # should init be here? 
-        # self.init_element()
+        self.init_element()
+        self.intro(countdown=5)
 
-        text_process = Process(target=self.cpt)
-        movement_process = Process(target=self.adaptive_movement)
+        text_process = Process(target=self.cpt, args=(self.ipc, self.key_dict, self.sequence_filename))
+        # movement_process = Process(target=self.adaptive_movement)
+        # adaptive_movement_process = Process(target=self.adaptive_movement, args=(self.ipc, self.key_dict, self.mask_queue, self.calculator))
+        alert_process = Process(target=self.alert, args=(self.ipc, self.mask_queue))
+
         text_process.start()
-        movement_process.start()
+        # movement_process.start()
+        # adaptive_movement_process.start()
+        alert_process.start()
         text_process.join()
-        movement_process.join()
-
+        # movement_process.join()
+        # adaptive_movement_process.join()
+        alert_process.join()
 
     def close(self):
         # Clean before exit
@@ -673,8 +719,8 @@ if __name__ == "__main__":
     # listener.join()
 
     ui_controller = UIController(offset='right', mask_queue=Queue(), sequence_filename='assets/cpt_sequence.json')
-    ui_controller.init_element()
-    ui_controller.intro(countdown=2)
+    # ui_controller.init_element()
+    # ui_controller.intro(countdown=5)
     # ui_controller.run()
 
     p = Process(target=ui_controller.run)

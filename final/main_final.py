@@ -19,13 +19,13 @@ if __name__ == "__main__":
 
     # init detection
     # Parameter settings
-    output_dir = "./outputs"
+    # output_dir = "./outputs"
     prompt_text = "hand."
     detection_interval = 20
 
     frame_idx = 0
 
-    os.makedirs(output_dir, exist_ok=True)
+    # os.makedirs(output_dir, exist_ok=True)
 
      # Initialize the object tracker
     tracker = IncrementalObjectTracker(
@@ -42,13 +42,8 @@ if __name__ == "__main__":
 
     # init ui connection
 
-    # HoloLens address
-    # host = "169.254.10.1"
-
-    # ipc = hl2ss_lnm.ipc_umq(host, hl2ss.IPCPort.UNITY_MESSAGE_QUEUE)
-    # ipc.open()
-
-    # clean_up(ipc)
+    from backend_ui_control import UIController
+    ui_controller = UIController(offset='right', mask_queue=mask_queue, sequence_filename='assets/cpt_sequence.json')
 
     #------------------------------------------------------------------------------
 
@@ -63,13 +58,19 @@ if __name__ == "__main__":
     # Start process
     frame_process = Process(target=frontend.run, name="FrontEndProcess")
 
-    # ui_process = Process(target=ui_control, name="UIProcess")
-
     frame_process.start()
     print(f"Front process started with PID: {frame_process.pid}")
 
-    # ui_process.start()
-    # print(f"UI process started with PID: {ui_process.pid}")
+
+    # Start UI process
+    # ui_controller.init_element()
+    # ui_controller.intro(countdown=5)
+
+    ui_process = Process(target=ui_controller.run, name="UIProcess")
+    ui_process.start()
+    print(f"UI process started with PID: {ui_process.pid}")
+
+
 
     try:
         while True:
