@@ -126,8 +126,8 @@ def get_total_force(anchor, position, obstacle_mask, k_att=0.4, k_rep=30.0,
 
 def apf_calculate(anchor, position, obstacle_mask, velocity=0,
                  # Physics parameters
-                 k_att=0.4, k_rep=30.0, damping_factor=1.0, d0=400.0, 
-                 max_v=15.0, dt=0.1, att_limit=40, rep_limit=100,
+                 k_att=0.4, k_rep=50.0, damping_factor=1.0, d0=600.0, 
+                 max_v=15.0, dt=0.1, att_limit=40, rep_limit=120,
                  rep_density_threshold=0.9, rep_small_magnitude=0.1,
                  # Coordinate conversion parameters  
                  scaling_factor=0.1/226, center_x=618, center_y=329, depth=0.5):

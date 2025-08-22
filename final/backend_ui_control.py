@@ -162,7 +162,7 @@ def update_position(ipc, key, position, rotation, scale):
     display_list.set_local_transform(key, position, rotation, scale)
     ipc.push(display_list)
     results = ipc.pull(display_list)
-    print(f'Changed position of element with id {key}')
+    # print(f'Changed position of element with id {key}')
 
 def destroy_element(ipc, key):
     """Destroy a UI element on HoloLens"""
@@ -669,7 +669,8 @@ class UIController:
             utc_time = np.datetime64(now_utc, 'ns')
             # print(f"utc_time: {utc_time}")
             rr.set_time("time", timestamp=utc_time)
-            rr.log("/ui/position", rr.Points2D(text_position[:2]))
+            rr.log("/ui/fov_position", rr.Points2D(position))
+            rr.log("/ui/converted_position", rr.Points2D(text_position[:2]))
 
             time.sleep(0.05)
 
