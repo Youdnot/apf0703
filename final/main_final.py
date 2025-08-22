@@ -115,7 +115,7 @@ if __name__ == "__main__":
             # print(f"utc_time: {utc_time}")
             rr.set_time("time", timestamp=utc_time)
 
-            rr.log("/detection/image", rr.Image(image=process_image_bgr, color_model="bgr").compress(jpeg_quality=10))
+            rr.log("/detection/image", rr.Image(image=process_image, color_model="bgr").compress(jpeg_quality=10))
             rr.log("/detection/mask", rr.Image(image=grey_scale_mask).compress(jpeg_quality=10))   
 
             frame_idx += 1
