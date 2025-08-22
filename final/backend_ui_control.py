@@ -1,5 +1,6 @@
 import time
 from multiprocessing import Process, Queue, Event
+import queue
 
 import random
 import numpy as np
@@ -532,6 +533,9 @@ class UIController:
         text_key = key_dict['text']
         # bg_key = self.key_dict['bg']
 
+        rr.init("Unified")
+        rr.connect_grpc()
+
         try:
             for i, (digit, target, interval) in enumerate(zip(digits, is_target, intervals)):
                 target_str = "【目标】" if target else "【非目标】"
@@ -550,13 +554,10 @@ class UIController:
                 # print(f"utc_time: {utc_time}")
                 rr.set_time("time", timestamp=utc_time)
 
-                rr.init("Unified")
-                rr.connect_grpc()
-
-                rr.log("digit", rr.TextLog(text))
-                rr.log("ground truth", rr.Scalars(target))
-                rr.log("stimulus_duration", rr.TextLog(stimulus_duration))
-                rr.log("interval_duration", rr.TextLog(interval_duration))
+                rr.log("/interaction/digit", rr.TextLog(text))
+                rr.log("/interaction/ground_truth", rr.Scalars(target))
+                rr.log("/interaction/stimulus_duration", rr.TextLog(stimulus_duration))
+                rr.log("/interaction/interval_duration", rr.TextLog(interval_duration))
         
 
         except KeyboardInterrupt:
@@ -573,9 +574,20 @@ class UIController:
 
         frame_count = 0
         alert = False
+        last_mask = None
+
+        rr.init("Unified")
+        rr.connect_grpc()
 
         while True:
-            obstacle_mask = mask_queue.get()
+            try:
+                obstacle_mask = mask_queue.get(timeout=0.05)
+                last_mask = obstacle_mask
+            except queue.Empty:
+                if last_mask is not None:
+                    obstacle_mask = last_mask
+                else:
+                    continue
 
             if obstacle_mask.any() and not alert:
                 alert_ui.create()
@@ -591,6 +603,12 @@ class UIController:
                 alert_ui.destroy()
                 frame_count = 0
                 alert = False
+
+            now_utc = datetime.utcnow()
+            utc_time = np.datetime64(now_utc, 'ns')
+            # print(f"utc_time: {utc_time}")
+            rr.set_time("time", timestamp=utc_time)
+            rr.log("/ui/alert", rr.TextLog(alert))
 
             time.sleep(0.1)
 

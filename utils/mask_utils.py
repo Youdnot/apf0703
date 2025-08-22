@@ -120,6 +120,7 @@ def get_merged_bool_mask_depth(mask_dict: MaskDictionaryModel, depth_map: np.nda
         if valid_depths.numel() == 0:
             print("[Warning] No valid depths under mask; skipping object")
             continue
+        # 手动调整筛选强度
         if valid_depths.min().item() > 1.0:
             print(f"[Warning] Depth mask is too far: {valid_depths.min().item():.3f} m")
             continue

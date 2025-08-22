@@ -80,11 +80,11 @@ if __name__ == "__main__":
             # cv2.imshow('Depth', hl2ss_3dcv.rm_depth_colormap(pv_z, max_depth=3.0))
             # cv2.waitKey(1)
             
-            print(f"[Frame {frame_idx}] Processing live frame...")
+            # print(f"[Frame {frame_idx}] Processing live frame...")
             process_image = tracker.add_image(color)
 
             if process_image is None or not isinstance(process_image, np.ndarray):
-                print(f"[Warning] Skipped frame {frame_idx} due to empty result.")
+                # print(f"[Warning] Skipped frame {frame_idx} due to empty result.")
                 frame_idx += 1
                 continue
 
@@ -93,7 +93,7 @@ if __name__ == "__main__":
             
             # 合并所有mask为bool数组
             merged_bool_mask = get_merged_bool_mask_depth(current_mask_dict, pv_z)
-            print(f"merged_bool_mask: {merged_bool_mask.shape}")
+            # print(f"merged_bool_mask: {merged_bool_mask.shape}")
             # 将布尔掩码转换为uint8格式用于显示
             grey_scale_mask = (merged_bool_mask * 255).astype(np.uint8)
             # cv2.imshow("Merged Bool Mask", grey_scale_mask)

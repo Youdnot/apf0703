@@ -210,9 +210,9 @@ class IncrementalObjectTracker:
                 ) = image_np.shape[:2]
 
             if self.inference_state["images"].shape[0] > self.frame_cache_limit:
-                print(
-                    f"[Reset] Resetting inference state after {self.frame_cache_limit} frames to free memory."
-                )
+                # print(
+                #     f"[Reset] Resetting inference state after {self.frame_cache_limit} frames to free memory."
+                # )
                 self.inference_state = self.video_predictor.init_state()
                 self.inference_state["images"] = torch.empty(
                     (0, 3, 1024, 1024), device=self.device
@@ -310,7 +310,7 @@ class IncrementalObjectTracker:
             json_metadata=self.last_mask_dict.to_dict(),
         )
 
-        print(f"[Tracker] Total processed frames: {self.total_frames}")
+        # print(f"[Tracker] Total processed frames: {self.total_frames}")
         self.total_frames += 1
         torch.cuda.empty_cache()
         return annotated_frame
@@ -384,9 +384,9 @@ class IncrementalObjectTracker:
             cv2.imwrite(
                 os.path.join(vis_data_dir, base_name + "_annotated.jpg"), annotated_bgr
             )
-            print(
-                f"[Saved] {base_name}.jpg and {base_name}_annotated.jpg saved successfully."
-            )
+            # print(
+            #     f"[Saved] {base_name}.jpg and {base_name}_annotated.jpg saved successfully."
+            # )
 
     def visualize_frame_with_mask_and_metadata(
         self,
@@ -424,7 +424,7 @@ class IncrementalObjectTracker:
 
         # Step 2: Check if valid objects exist
         if len(all_object_ids) == 0:
-            print("No valid object instances found in metadata.")
+            # print("No valid object instances found in metadata.")
             return image
 
         # Step 3: Sort by instance ID
