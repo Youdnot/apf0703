@@ -14,6 +14,8 @@ import hl2ss
 import hl2ss_lnm
 import hl2ss_rus
 
+from apf_func import *
+
 #------------------------------------------------------------------------------
 # Functions
 
@@ -463,9 +465,7 @@ class UIController:
         self.mask_queue = mask_queue
         self.sequence_filename = sequence_filename
 
-        anchor_pixel = unity_to_pixel(self.anchor)
-
-        self.calculator = APFCalculator(anchor=anchor_pixel, position=anchor_pixel, mask_queue=self.mask_queue)
+        # anchor_pixel = unity_to_pixel(self.anchor)
 
         self.ipc = hl2ss_lnm.ipc_umq(self.host, hl2ss.IPCPort.UNITY_MESSAGE_QUEUE)
         self.ipc.open()
@@ -632,13 +632,32 @@ class UIController:
             time.sleep(0.05)
 
     @staticmethod
-    def adaptive_movement(ipc, key_dict, mask_queue, calculator):
+    def adaptive_movement(ipc, key_dict, mask_queue, anchor):
         text_key = key_dict['text']
         bg_key = key_dict['bg']
 
+        last_mask = None
+
+        anchor_pixel = unity_to_pixel(anchor)
+
+        position = anchor_pixel
+
+        rr.init("Unified")
+        rr.connect_grpc()
+
         while True:
-            obstacle_mask = mask_queue.get()
-            text_position = calculator.run(obstacle_mask)
+            try:
+                obstacle_mask = mask_queue.get(timeout=0.05)
+                last_mask = obstacle_mask
+            except queue.Empty:
+                if last_mask is not None:
+                    obstacle_mask = last_mask
+                else:
+                    continue
+
+            position, velocity, converted_pos = apf_calculate(anchor=anchor_pixel, position=position, obstacle_mask=obstacle_mask)
+
+            text_position = converted_pos
 
             bg_position = [*text_position[:2], text_position[2] + 0.01]
             update_position(ipc, bg_key,
@@ -646,27 +665,34 @@ class UIController:
             update_position(ipc, text_key,
                             position=text_position, rotation=[0, 0, 0, 1], scale=[2, 2, 1])
             
+            now_utc = datetime.utcnow()
+            utc_time = np.datetime64(now_utc, 'ns')
+            # print(f"utc_time: {utc_time}")
+            rr.set_time("time", timestamp=utc_time)
+            rr.log("/ui/position", rr.Points2D(text_position[:2]))
+
             time.sleep(0.05)
 
 
     def run(self):
         # should init be here? 
         self.init_element()
-        self.intro(countdown=5)
+        self.intro(countdown=10)
 
         text_process = Process(target=self.cpt, args=(self.ipc, self.key_dict, self.sequence_filename))
         # movement_process = Process(target=self.adaptive_movement)
-        # adaptive_movement_process = Process(target=self.adaptive_movement, args=(self.ipc, self.key_dict, self.mask_queue, self.calculator))
-        alert_process = Process(target=self.alert, args=(self.ipc, self.mask_queue))
+
+        # alert_process = Process(target=self.alert, args=(self.ipc, self.mask_queue))
+        adaptive_movement_process = Process(target=self.adaptive_movement, args=(self.ipc, self.key_dict, self.mask_queue, self.anchor))
 
         text_process.start()
         # movement_process.start()
-        # adaptive_movement_process.start()
-        alert_process.start()
+        adaptive_movement_process.start()
+        # alert_process.start()
         text_process.join()
         # movement_process.join()
-        # adaptive_movement_process.join()
-        alert_process.join()
+        adaptive_movement_process.join()
+        # alert_process.join()
 
     def close(self):
         # Clean before exit

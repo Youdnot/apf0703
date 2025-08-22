@@ -70,8 +70,6 @@ if __name__ == "__main__":
     ui_process.start()
     print(f"UI process started with PID: {ui_process.pid}")
 
-
-
     try:
         while True:
             color, pv_z, timestamp = frame_queue.get()

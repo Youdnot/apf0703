@@ -4,13 +4,11 @@ import rerun as rr
 
 class APFCalculator:
 
-    def __init__(self, anchor, position, mask_queue):
+    def __init__(self, anchor, position, obstacle_mask):
         self.anchor = anchor
         self.position = position
         self.velocity = 0
-        self.mask_queue: Queue = mask_queue
-
-        self.last_mask = None
+        self.obstacle_mask = obstacle_mask
 
         # Mapping
         # 1080p
@@ -174,13 +172,7 @@ class APFCalculator:
     #     rr.connect_grpc()
 
     def run(self):
-        if self.mask_queue.qsize() > 0:
-            obstacle_mask = self.mask_queue.get()
-            self.update_position_and_velocity(obstacle_mask)
 
-            self.last_mask = obstacle_mask
-        elif (self.mask_queue.qsize() == 0):
-            if self.last_mask is not None:
-                self.update_position_and_velocity(self.last_mask)
+        self.update_position_and_velocity(self.obstacle_mask)
 
         return self.converted_pos
