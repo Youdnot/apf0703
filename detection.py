@@ -61,9 +61,6 @@ def main():
             # 从tracker获取当前mask和元数据
             current_mask_dict = tracker.last_mask_dict
             # print(f"current_mask_dict: {current_mask_dict}")
-            print(f"current_mask_dict.mask_list: {current_mask_dict.mask_list}")
-            print(f"current_mask_dict.box_list: {current_mask_dict.box_list}")
-            print(f"current_mask_dict.label_list: {current_mask_dict.label_list}")
             
             # 合并所有mask为bool数组
             merged_bool_mask = get_merged_bool_mask(current_mask_dict)

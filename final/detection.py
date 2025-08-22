@@ -50,8 +50,8 @@ class GroundingDinoPredictor:
         self,
         image: "PIL.Image.Image",
         text_prompts: str,
-        box_threshold=0.4,
-        text_threshold=0.4,
+        box_threshold=0.25,
+        text_threshold=0.25,
     ):
         """
         Perform object detection using text prompts.
@@ -244,7 +244,7 @@ class IncrementalObjectTracker:
             # 1.4 Object ID tracking and IOU-based update
             self.objects_count = mask_dict.update_masks(
                 tracking_annotation_dict=self.last_mask_dict,
-                iou_threshold=0.4,
+                iou_threshold=0.3,
                 objects_count=self.objects_count,
             )
 
