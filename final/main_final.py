@@ -21,7 +21,7 @@ if __name__ == "__main__":
     # Parameter settings
     # output_dir = "./outputs"
     prompt_text = "hand."
-    detection_interval = 20
+    detection_interval = 10
 
     frame_idx = 0
 
@@ -29,21 +29,22 @@ if __name__ == "__main__":
 
      # Initialize the object tracker
     tracker = IncrementalObjectTracker(
-        grounding_model_id="IDEA-Research/grounding-dino-tiny",
-        sam2_model_cfg="configs/sam2.1/sam2.1_hiera_t.yaml",
-        sam2_ckpt_path="./external/grounding_sam2/checkpoints/sam2.1_hiera_tiny.pt",
+        grounding_model_id="IDEA-Research/grounding-dino-base", # tiny or base
+        sam2_model_cfg="configs/sam2.1/sam2.1_hiera_s.yaml",
+        sam2_ckpt_path="./external/grounding_sam2/checkpoints/sam2.1_hiera_small.pt",
         device="cuda",
         prompt_text=prompt_text,
         detection_interval=detection_interval,
     )
-    tracker.set_prompt("obstacle. person. desk. table. chair. bin. viehicle. car. bus. truck.")
+    # tracker.set_prompt("obstacle. person. desk. table. chair. bin. viehicle. car. bus. truck.")
+    tracker.set_prompt("obstacle. person. stack. stack of small cubes.")
 
     #------------------------------------------------------------------------------
 
     # init ui connection
 
     from backend_ui_control import UIController
-    ui_controller = UIController(offset='right', mask_queue=mask_queue, sequence_filename='assets/cpt_sequence.json')
+    ui_controller = UIController(offset='right', mask_queue=mask_queue, sequence_filename='assets/seqence/cpt_sequence_0.json')
 
     #------------------------------------------------------------------------------
 

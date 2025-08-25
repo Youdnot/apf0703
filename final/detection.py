@@ -50,8 +50,8 @@ class GroundingDinoPredictor:
         self,
         image: "PIL.Image.Image",
         text_prompts: str,
-        box_threshold=0.25,
-        text_threshold=0.25,
+        box_threshold=0.3,
+        text_threshold=0.3,
     ):
         """
         Perform object detection using text prompts.
@@ -140,9 +140,9 @@ class SAM2ImageSegmentor:
 class IncrementalObjectTracker:
     def __init__(
         self,
-        grounding_model_id="IDEA-Research/grounding-dino-tiny",
-        sam2_model_cfg="configs/sam2.1/sam2.1_hiera_t.yaml",
-        sam2_ckpt_path="./checkpoints/sam2.1_hiera_tiny.pt",
+        grounding_model_id="IDEA-Research/grounding-dino-base",
+        sam2_model_cfg="configs/sam2.1/sam2.1_hiera_s.yaml",
+        sam2_ckpt_path="./checkpoints/sam2.1_hiera_small.pt",
         device="cuda",
         prompt_text="car.",
         detection_interval=20,

@@ -36,7 +36,7 @@ class CPTConfig:
     target_ratio: float = 0.3
     stimulus_duration: int = 800
     isi_range: Tuple[int, int] = (500, 1000)
-    max_consecutive_targets: int = 3
+    max_consecutive_targets: int = 2
     max_consecutive_intervals: int = 3
 
 
@@ -331,10 +331,11 @@ def main():
     generator = CPTSequenceGenerator(config)
     
     # 生成序列
-    sequence = generator.generate_sequence()
-    
-    # 保存序列
-    generator.save_sequence(sequence, 'cpt_sequence.json')
+    for i in range(21):
+        sequence = generator.generate_sequence()
+        
+        # 保存序列
+        generator.save_sequence(sequence, f'cpt_sequence_{i}.json')
     
     # 打印统计信息
     metadata = sequence['metadata']

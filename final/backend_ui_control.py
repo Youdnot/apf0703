@@ -457,9 +457,9 @@ class UIController:
         self.offset = offset
 
         if offset == 'left':
-            self.anchor = [-0.08, -0.1, 0.5]
+            self.anchor = [-0.05, -0.05, 0.5]
         elif offset == 'right':
-            self.anchor = [0.08, -0.1, 0.5]
+            self.anchor = [0.05, -0.05, 0.5]
 
         self.key_dict = {}
         self.mask_queue = mask_queue
@@ -501,7 +501,7 @@ class UIController:
         # Create starting text object
         intro_key = create_element_text(self.ipc, key,
                         font_size=0.4, text=welcome_text,
-                        position=[0, 0, 0.5], rotation=[0, 0, 0, 1], scale=[1, 1, 1],
+                        position=[0, 0, 0.45], rotation=[0, 0, 0, 1], scale=[1, 1, 1],
                         rgba=[1, 1, 1, 1])
         print(f'Text object created with id {intro_key}')
 
@@ -511,13 +511,13 @@ class UIController:
             text = str(f"Welcome to experiment!\nStart in {seconds_left} seconds...")
             update_text(self.ipc, intro_key,
                         font_size=0.4, text=text,
-                        position=[0, 0, 0.5], rotation=[0, 0, 0, 1], scale=[1, 1, 1],
+                        position=[0, 0, 0.45], rotation=[0, 0, 0, 1], scale=[1, 1, 1],
                         rgba=[1, 1, 1, 1])
             time.sleep(1)
 
         update_text(self.ipc, intro_key,
                         font_size=0.4, text="Starting now!",
-                        position=[0, 0, 0.5], rotation=[0, 0, 0, 1], scale=[1, 1, 1],
+                        position=[0, 0, 0.45], rotation=[0, 0, 0, 1], scale=[1, 1, 1],
                         rgba=[1, 1, 1, 1])
 
         time.sleep(1)
@@ -629,7 +629,7 @@ class UIController:
             update_position(self.ipc, text_key,
                         position=[x, y-0.1, 0.5], rotation=[0, 0, 0, 1], scale=[2, 2, 1])
             
-            time.sleep(0.05)
+            time.sleep(0.01)
 
     @staticmethod
     def adaptive_movement(ipc, key_dict, mask_queue, anchor):
@@ -670,7 +670,7 @@ class UIController:
             # print(f"utc_time: {utc_time}")
             rr.set_time("time", timestamp=utc_time)
             rr.log("/ui/fov_position", rr.Points2D(position))
-            rr.log("/ui/converted_position", rr.Points2D(text_position[:2]))
+            rr.log("/ui/converted_position", rr.Points2D((text_position[0], -text_position[1]))) # for vis
 
             time.sleep(0.05)
 
@@ -686,12 +686,13 @@ class UIController:
         alert_process = Process(target=self.alert, args=(self.ipc, self.mask_queue))
         # adaptive_movement_process = Process(target=self.adaptive_movement, args=(self.ipc, self.key_dict, self.mask_queue, self.anchor))
 
+
         text_process.start()
-        # movement_process.start()
         # adaptive_movement_process.start()
         alert_process.start()
+
+
         text_process.join()
-        # movement_process.join()
         # adaptive_movement_process.join()
         alert_process.join()
 

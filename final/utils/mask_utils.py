@@ -110,18 +110,18 @@ def get_merged_bool_mask_depth(mask_dict: MaskDictionaryModel, depth_map: np.nda
             print(f"[Warning] Mask shape mismatch: expected {target_shape}, got {mask.shape}")
             continue
 
-        # 筛选小面积mask（mask为bool，sum即为像素计数）
-        if mask.sum().item() < 8000:
+        # 筛选小面积mask和大面积异常mask（mask为bool，sum即为像素计数）
+        if mask.sum().item() < 4000 or mask.sum().item() > 85000:
             continue
         
         # 深度筛选：在统一设备上进行，忽略无效深度（<=0 或 非有限值）
         masked_depths = depth_tensor[mask]
         valid_depths = masked_depths[torch.isfinite(masked_depths) & (masked_depths > 0)]
         if valid_depths.numel() == 0:
-            print("[Warning] No valid depths under mask; skipping object")
+            # print("[Warning] No valid depths under mask; skipping object")
             continue
-        if valid_depths.min().item() > 5.0:
-            print(f"[Warning] Depth mask is too far: {valid_depths.min().item():.3f} m")
+        if valid_depths.min().item() > 4.0:
+            # print(f"[Warning] Depth mask is too far: {valid_depths.min().item():.3f} m")
             continue
         
         valid_masks.append(mask)
