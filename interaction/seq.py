@@ -323,8 +323,8 @@ def main():
     config = CPTConfig(
         target_digit=5,
         target_ratio=0.3,
-        sequence_length=40,
-        isi_range=(500, 1000)
+        sequence_length=24,
+        isi_range=(500, 800)
     )
     
     # 创建生成器
@@ -337,13 +337,15 @@ def main():
         # 保存序列
         generator.save_sequence(sequence, f'cpt_sequence_{i}.json')
     
-    # 打印统计信息
-    metadata = sequence['metadata']
-    print("\n=== 序列生成完成 ===")
-    print(f"序列长度: {metadata['statistics']['total_stimuli']}")
-    print(f"目标数量: {metadata['statistics']['target_count']}")
-    print(f"实际目标比例: {metadata['statistics']['actual_target_ratio']:.1%}")
-    print(f"预计总时长: {metadata['statistics']['total_duration_seconds']:.1f}秒")
+        # 打印统计信息
+        metadata = sequence['metadata']
+        print("\n=== 序列生成完成 ===")
+        print(f"序列长度: {metadata['statistics']['total_stimuli']}")
+        print(f"目标数量: {metadata['statistics']['target_count']}")
+        print(f"实际目标比例: {metadata['statistics']['actual_target_ratio']:.1%}")
+        print(f"预计总时长: {metadata['statistics']['total_duration_seconds']:.1f}秒")
+
+        # break
 
 
 if __name__ == "__main__":
