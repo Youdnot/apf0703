@@ -36,8 +36,8 @@ class CPTConfig:
     target_ratio: float = 0.3
     stimulus_duration: int = 800
     isi_range: Tuple[int, int] = (500, 1000)
-    max_consecutive_targets: int = 2
-    max_consecutive_intervals: int = 3
+    max_consecutive_targets: int = 1
+    max_consecutive_intervals: int = 2
 
 
 class CPTSequenceGenerator:
