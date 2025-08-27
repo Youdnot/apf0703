@@ -1,4 +1,5 @@
 assets/*
+!assets/seqence/
 external/*
 outputs/*
 calibration/*

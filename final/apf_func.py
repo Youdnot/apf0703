@@ -112,7 +112,7 @@ def get_repulsive_force(position, anchor, obstacle_mask,
 
 
 def get_total_force(anchor, position, obstacle_mask, k_att=0.4, k_rep=30.0, 
-                   d0=400.0, att_limit=40, rep_limit=100, rep_density_threshold=0.9, 
+                   d0=400.0, att_limit=40, rep_limit=50, rep_density_threshold=0.9, 
                    rep_small_magnitude=0.1):
     """计算总力"""
     attractive_force = get_attractive_force(anchor, position, att_limit)

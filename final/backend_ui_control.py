@@ -680,21 +680,43 @@ class UIController:
         self.init_element()
         self.intro(countdown=10)
 
-        text_process = Process(target=self.cpt, args=(self.ipc, self.key_dict, self.sequence_filename))
-        # movement_process = Process(target=self.adaptive_movement)
-
-        alert_process = Process(target=self.alert, args=(self.ipc, self.mask_queue))
-        # adaptive_movement_process = Process(target=self.adaptive_movement, args=(self.ipc, self.key_dict, self.mask_queue, self.anchor))
 
 
-        text_process.start()
-        # adaptive_movement_process.start()
-        alert_process.start()
 
 
-        text_process.join()
-        # adaptive_movement_process.join()
-        alert_process.join()
+
+
+        # ================================================================================
+        # mode = "fixed"
+        # mode = "alert"
+        mode = "adaptive"
+        # ================================================================================
+
+
+
+
+
+        if mode == "fixed":
+            text_process = Process(target=self.cpt, args=(self.ipc, self.key_dict, self.sequence_filename))
+            text_process.start()
+            text_process.join()
+
+        elif mode == "alert":
+            text_process = Process(target=self.cpt, args=(self.ipc, self.key_dict, self.sequence_filename))
+            alert_process = Process(target=self.alert, args=(self.ipc, self.mask_queue))
+            text_process.start()
+            alert_process.start()
+            text_process.join()
+            alert_process.join()
+
+        elif mode == "adaptive":
+            text_process = Process(target=self.cpt, args=(self.ipc, self.key_dict, self.sequence_filename))
+            adaptive_movement_process = Process(target=self.adaptive_movement, args=(self.ipc, self.key_dict, self.mask_queue, self.anchor))
+            text_process.start()
+            adaptive_movement_process.start()
+            text_process.join()
+            adaptive_movement_process.join()
+            
 
     def close(self):
         # Clean before exit

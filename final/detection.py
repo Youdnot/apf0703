@@ -5,7 +5,7 @@ import copy
 import os
 
 # mirror source
-os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+# os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 
 import cv2
 import numpy as np
@@ -31,6 +31,7 @@ class GroundingDinoPredictor:
     Wrapper for using a GroundingDINO model for zero-shot object detection.
     """
 
+    # def __init__(self, model_id="./local-grounding-dino", device="cuda"):
     def __init__(self, model_id="IDEA-Research/grounding-dino-tiny", device="cuda"):
         """
         Initialize the GroundingDINO predictor.

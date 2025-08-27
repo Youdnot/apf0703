@@ -29,7 +29,8 @@ if __name__ == "__main__":
 
      # Initialize the object tracker
     tracker = IncrementalObjectTracker(
-        grounding_model_id="IDEA-Research/grounding-dino-base", # tiny or base
+        # grounding_model_id="IDEA-Research/grounding-dino-base", # tiny or base
+        grounding_model_id="assets/local-grounding-dino",
         sam2_model_cfg="configs/sam2.1/sam2.1_hiera_s.yaml",
         sam2_ckpt_path="./external/grounding_sam2/checkpoints/sam2.1_hiera_small.pt",
         device="cuda",
@@ -44,7 +45,15 @@ if __name__ == "__main__":
     # init ui connection
 
     from backend_ui_control import UIController
-    ui_controller = UIController(offset='right', mask_queue=mask_queue, sequence_filename='assets/seqence/cpt_sequence_0.json')
+
+
+
+
+    # ================================================================================
+    ui_controller = UIController(offset='right', mask_queue=mask_queue, sequence_filename='assets/seqence/cpt_sequence_19.json')
+    # ================================================================================
+
+
 
     #------------------------------------------------------------------------------
 
